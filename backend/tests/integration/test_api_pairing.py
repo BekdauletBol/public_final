@@ -260,3 +260,15 @@ def test_mint_pair_url_never_uses_bind_address(tc: TestClient, monkeypatch) -> N
     )
     assert r.json()["pair_url"].startswith("https://192.168.0.20:5173/pair?c=")
     assert r.json()["pair_url_warning"] is None
+
+
+def test_redeem_ws_url_uses_the_phones_own_host(tc: TestClient) -> None:
+    s = tc_session(tc)
+    m = tc_mint(tc, s["id"])
+    r = tc.post(
+        "/api/pair/redeem",
+        json={"pin": m["pin"], "code_id": m["code_id"]},
+        headers={"host": "localhost:8445"},
+    )
+    assert r.status_code == 200
+    assert r.json()["ws_url"] == "wss://localhost:8445/ws/camera"

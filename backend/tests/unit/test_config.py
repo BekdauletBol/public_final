@@ -124,3 +124,15 @@ def test_startup_warnings(tmp_path: Path, make_settings) -> None:
     assert any("fifo" in w for w in warnings)
     assert any("EVAL_RECORD" in w for w in warnings)
     assert len(warnings) == 3
+
+
+def test_relative_paths_anchor_to_root(monkeypatch: pytest.MonkeyPatch) -> None:
+    from publicsafe.config import ROOT_DIR
+
+    monkeypatch.setenv("SSL_CERTFILE", "certs/dev.pem")
+    monkeypatch.setenv("FRONTEND_DIST", "frontend/dist")
+    monkeypatch.setenv("DATA_DIR", "/abs/data")
+    s = raw_settings()
+    assert s.ssl_certfile == ROOT_DIR / "certs" / "dev.pem"
+    assert s.frontend_dist == ROOT_DIR / "frontend" / "dist"
+    assert s.data_dir == Path("/abs/data")

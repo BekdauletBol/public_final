@@ -17,8 +17,16 @@ def admin_ws(tc: TestClient):
 
 
 def drain_until(ws, predicate, limit: int = 50) -> dict:
+    """Next JSON message matching ``predicate``; binary previews are skipped."""
+    import json
+
     for _ in range(limit):
-        msg = ws.receive_json()
+        raw = ws.receive()
+        if raw.get("type") == "websocket.close":
+            raise AssertionError(f"socket closed: {raw}")
+        if "text" not in raw:
+            continue
+        msg = json.loads(raw["text"])
         if predicate(msg):
             return msg
     raise AssertionError("message not received")
@@ -101,3 +109,22 @@ def test_subscription_filter(tc: TestClient) -> None:
             msg = drain_until(ws, lambda m: m["type"] == "camera_status")
             statuses[msg["camera_id"]] = msg["status"]
         assert set(statuses) == {a_id, b_id}
+
+
+def test_revoke_and_redeem_are_announced(tc: TestClient) -> None:
+    s = tc_session(tc)
+    with admin_ws(tc) as ws:
+        ws.send_json({"type": "subscribe", "camera_ids": "all", "preview_fps": 1})
+        drain_until(ws, lambda m: m["type"] == "metrics")
+        m = tc_mint(tc, s["id"], camera_name_hint="Gate")
+        r = tc.post("/api/pair/redeem", json={"pin": m["pin"], "code_id": m["code_id"]})
+        camera_id = r.json()["camera_id"]
+        paired = drain_until(ws, lambda m: m["type"] == "camera_status" and m["status"] == "paired")
+        assert paired["camera_id"] == camera_id and paired["reason"] == "redeemed"
+        assert (
+            tc.post(f"/api/cameras/{camera_id}/revoke", json={"reason": "lost"}).status_code == 204
+        )
+        revoked = drain_until(
+            ws, lambda m: m["type"] == "camera_status" and m["status"] == "revoked"
+        )
+        assert revoked["camera_id"] == camera_id and revoked["reason"] == "lost"
