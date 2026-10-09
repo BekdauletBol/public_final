@@ -7,9 +7,9 @@ against a per-camera polygon, turns per-frame membership into entry/exit events
 with hysteresis, and shows everything live on a web dashboard. The same code
 runs offline on public datasets for reproducible evaluation.
 
-Status: **M2** (HTTPS, database, admin login, sessions/cameras/zones CRUD, PIN
-pairing with device tokens, camera and dashboard WebSockets with live status,
-security log page). Phone streaming and detection arrive in M3-M4; see
+Status: **M3** (HTTPS, database, admin login, sessions/cameras/zones CRUD, PIN
+pairing, phone capture page, frame ingest with a per-camera mailbox, live
+previews, metrics, load test). Detection, zones and events arrive in M4; see
 `publicsafe-cli-spec.md`.
 
 ## Quick start (macOS, Apple Silicon)
@@ -38,6 +38,26 @@ docs/                 setup, phone CA, API, evaluation, ADRs
 configs/              evaluation configs
 data/, certs/         git-ignored runtime data and certificates
 ```
+
+## Phones
+
+Pair a phone from a session's "Add camera" button: it shows a PIN, a link and a
+QR. On the phone open `https://<lan-ip>:5173/pair` (dev) or `:8443/pair`
+(`make run`), type the PIN and allow the camera. The phone page shows the
+connection state, send rate and last acknowledgement; "Forget this phone"
+removes the pairing.
+
+## Load test
+
+```bash
+make test-load                          # 3 fake phones at 15 fps for 60 s, latest then fifo
+LOADTEST_DURATION=15 make test-load     # quicker
+.venv/bin/publicsafe loadtest --phones 1,2,3,5 --fps 10 --source data/frames \
+  --duration 60 --server https://localhost:8443 --admin-password ... --ca "$(mkcert -CAROOT)/rootCA.pem"
+```
+
+`--queue fifo` requires the server to run with `SCHEDULER_STRATEGY=fifo`; the
+CLI checks and prints the instruction.
 
 ## Commands
 

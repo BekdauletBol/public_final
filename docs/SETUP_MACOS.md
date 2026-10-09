@@ -59,8 +59,8 @@ make test          # unit + integration + security + cv, no network/GPU
 make lint          # ruff, black, mypy --strict (core), eslint, prettier, tsc
 make format
 make test-model    # real YOLOv8n (downloads weights)
-make test-browser  # Playwright, from M3
-make test-load     # load test, from M3
+make test-browser  # Playwright + Chromium with a fake camera against a TEST_MODE backend on :8445
+make test-load     # 3 fake phones at 15 fps, latest then fifo (LOADTEST_DURATION=60 by default)
 ```
 
 ## 5. Troubleshooting

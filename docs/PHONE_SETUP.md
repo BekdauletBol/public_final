@@ -43,6 +43,17 @@ network, re-run `.venv/bin/publicsafe certs --force` and restart.
 
 ## 5. Manual checklist (iOS Safari and Android Chrome)
 
-Filled in at M3 and later. Record phone model, OS version, browser version and
-the outcome of: certificate trusted, pairing, "Streaming" reached, reconnect
-after Wi-Fi loss, revoke message, wake lock.
+Record phone model, OS and browser version, then tick each item:
+
+| Check | iOS Safari | Android Chrome |
+|---|---|---|
+| Root CA trusted, no certificate warning on `/pair` | | not run (no device) |
+| Pre-check shows the PIN boxes (secure context, camera API, server reachable) | | |
+| PIN typed (or QR scanned) -> `/camera` reaches "Streaming" | | |
+| Dashboard tile turns online and shows live frames | | |
+| Wi-Fi off for 20 s -> dashboard shows offline, phone shows "Reconnecting (n)", then back online | | |
+| Tab hidden -> dashboard shows paused; visible again -> online | | |
+| Revoke on the dashboard -> phone shows the revoked message and forgets its pairing | | |
+| Screen stays on while streaming (wake lock) or the page says to keep it on | | |
+
+The automated equivalent runs in Chromium with a fake camera (`make test-browser`).
