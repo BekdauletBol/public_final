@@ -90,3 +90,51 @@ def certs(
 
 if __name__ == "__main__":
     app()
+
+
+admin_app = typer.Typer(help="Admin account management.", no_args_is_help=True)
+app.add_typer(admin_app, name="admin")
+
+MIN_PASSWORD_LENGTH = 8
+
+
+@admin_app.command("set-password")
+def admin_set_password(
+    password_stdin: bool = typer.Option(
+        False, help="Read the password from stdin (first line) instead of prompting."
+    ),
+    env_file: Path = typer.Option(ROOT_DIR / ".env", help="Dotenv file to update."),
+) -> None:
+    """Choose the admin password: writes ADMIN_PASSWORD_HASH (argon2id) and logs out all admins."""
+    import sys
+
+    from argon2 import PasswordHasher
+
+    from publicsafe.api.auth import AdminAuth
+    from publicsafe.config import write_env_value
+    from publicsafe.db.base import (
+        make_engine,
+        make_sessionmaker,
+        resolve_database_url,
+        session_scope,
+    )
+
+    if password_stdin:
+        password = sys.stdin.readline().rstrip("\r\n")
+    else:
+        password = typer.prompt("New admin password", hide_input=True, confirmation_prompt=True)
+    if len(password) < MIN_PASSWORD_LENGTH:
+        raise _fail(f"Password must be at least {MIN_PASSWORD_LENGTH} characters.")
+
+    write_env_value(env_file, "ADMIN_PASSWORD_HASH", PasswordHasher().hash(password))
+    typer.echo(f"Wrote ADMIN_PASSWORD_HASH to {env_file}")
+
+    settings = get_settings()
+    try:
+        engine = make_engine(resolve_database_url(settings.database_url))
+        with session_scope(make_sessionmaker(engine)) as db:
+            removed = AdminAuth.destroy_all(db)
+        typer.echo(f"Invalidated {removed} admin session(s).")
+    except Exception as exc:
+        typer.secho(f"note: no admin sessions invalidated ({type(exc).__name__})", fg="yellow")
+    typer.echo("Restart the server for the new password to take effect.")

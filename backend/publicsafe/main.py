@@ -1,7 +1,8 @@
-"""FastAPI application factory, static serving and startup checks."""
+"""FastAPI application factory, database start-up, static serving and startup checks."""
 
 from __future__ import annotations
 
+import datetime as dt
 import logging
 import time
 from collections.abc import Awaitable, Callable, MutableMapping
@@ -9,22 +10,35 @@ from pathlib import Path
 from typing import Any
 
 import markdown
+from argon2.exceptions import InvalidHashError
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
+from sqlalchemy import text
 from starlette.datastructures import MutableHeaders
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from publicsafe import __version__
-from publicsafe.api import health
+from publicsafe.api import auth, cameras, health, security, sessions, zones
+from publicsafe.api import test as test_api
+from publicsafe.api.auth import AdminAuth
 from publicsafe.api.errors import STATUS_CODES, ApiError, error_body
-from publicsafe.config import DOCS_DIR, Settings, get_settings, startup_checks
+from publicsafe.api.ratelimit import SlidingWindowLimiter
+from publicsafe.config import DOCS_DIR, ConfigError, Settings, get_settings, startup_checks
+from publicsafe.db import migrate
+from publicsafe.db.base import make_engine, make_sessionmaker, resolve_database_url
 
 log = logging.getLogger("publicsafe")
 
 #: Content-Security-Policy applied when FastAPI serves the built frontend (Section D).
 CSP_POLICY = "default-src 'self'; img-src 'self' blob: data:; connect-src 'self' wss:"
+
+#: Rate-limit rules per route (F-SEC-2): (max requests, window seconds).
+RATE_LIMITS: dict[str, list[tuple[int, float]]] = {
+    "login": [(5, 60.0)],
+    "redeem": [(10, 60.0), (30, 600.0)],
+}
 
 Scope = MutableMapping[str, Any]
 Receive = Callable[[], Awaitable[MutableMapping[str, Any]]]
@@ -135,6 +149,31 @@ def _install_spa(app: FastAPI, dist: Path) -> None:
         return FileResponse(index, headers={"Cache-Control": "no-cache"})
 
 
+def _init_database(app: FastAPI, settings: Settings) -> None:
+    url = resolve_database_url(settings.database_url)
+    engine = make_engine(url)
+    if settings.auto_migrate:
+        migrate.upgrade(url)
+    else:
+        try:
+            migrate.ensure_current(engine, url)
+        except migrate.SchemaMismatchError as exc:
+            raise ConfigError(str(exc)) from None
+    app.state.engine = engine
+    app.state.sessionmaker = make_sessionmaker(engine)
+    app.state.database_url = url
+
+
+def db_status(app: FastAPI) -> str:
+    try:
+        with app.state.engine.connect() as conn:
+            conn.execute(text("SELECT 1"))
+        return "ok"
+    except Exception:
+        log.exception("database health check failed")
+        return "error"
+
+
 def create_app(settings: Settings | None = None) -> FastAPI:
     """Build the application. ``settings`` is injectable for tests."""
     settings = settings or get_settings()
@@ -154,8 +193,31 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.started_at = time.monotonic()
     app.state.warnings = warnings
 
+    _init_database(app, settings)
+    assert settings.admin_password_hash is not None  # guaranteed by startup_checks
+    try:
+        app.state.admin_auth = AdminAuth(
+            settings.admin_username,
+            settings.admin_password_hash,
+            dt.timedelta(hours=settings.session_idle_hours),
+        )
+    except InvalidHashError:
+        raise ConfigError(
+            "ADMIN_PASSWORD_HASH is not a valid argon2 hash. "
+            "Run `publicsafe admin set-password` to create one."
+        ) from None
+    app.state.limiters = {name: SlidingWindowLimiter(rules) for name, rules in RATE_LIMITS.items()}
+    app.state.db_status = lambda: db_status(app)
+
     _install_error_handlers(app)
     app.include_router(health.router)
+    app.include_router(auth.router)
+    app.include_router(sessions.router)
+    app.include_router(cameras.router)
+    app.include_router(zones.router)
+    app.include_router(security.router)
+    if settings.test_mode:
+        app.include_router(test_api.router)
     _install_help_pages(app)
 
     serves_frontend = (settings.frontend_dist / "index.html").is_file()

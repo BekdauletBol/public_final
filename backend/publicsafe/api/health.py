@@ -21,5 +21,5 @@ def health(request: Request) -> dict[str, Any]:
         "uptime_s": round(time.monotonic() - state.started_at, 1),
         "device": getattr(state, "device", None),
         "model_sha256": getattr(state, "model_sha256", None),
-        "db": getattr(state, "db_status", None),
+        "db": state.db_status() if callable(getattr(state, "db_status", None)) else None,
     }

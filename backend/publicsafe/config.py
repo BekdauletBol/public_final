@@ -128,6 +128,30 @@ def startup_checks(settings: Settings, *, require_tls: bool = True) -> list[str]
     return warnings
 
 
+def write_env_value(env_file: Path, key: str, value: str, template: Path | None = None) -> None:
+    """Set ``KEY='value'`` in a dotenv file, replacing an existing line or appending.
+
+    The file is created from ``template`` (``.env.example``) when missing. The
+    value is single-quoted so that ``$`` (as in argon2 hashes) is never expanded.
+    """
+    if "'" in value or "\n" in value:
+        raise ValueError("value must not contain quotes or newlines")
+    if not env_file.exists():
+        source = template if template is not None else env_file.with_name(".env.example")
+        env_file.write_text(source.read_text(encoding="utf-8") if source.exists() else "")
+    lines = env_file.read_text(encoding="utf-8").splitlines()
+    new_line = f"{key}='{value}'"
+    replaced = False
+    for index, line in enumerate(lines):
+        stripped = line.strip()
+        if stripped.startswith(f"{key}=") or stripped.startswith(f"export {key}="):
+            lines[index] = new_line
+            replaced = True
+    if not replaced:
+        lines.append(new_line)
+    env_file.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
 @lru_cache(maxsize=1)
 def get_settings() -> Settings:
     """Process-wide settings instance (cached)."""
