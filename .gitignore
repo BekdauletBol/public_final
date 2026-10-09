@@ -39,4 +39,4 @@ frontend/playwright-report/
 
 # Claude Code local permission settings
 .claude/settings.local.json
-e2e/out/
+frontend/e2e/out/
