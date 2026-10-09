@@ -1,0 +1,41 @@
+# secrets and local config
+.env
+.env.*
+!.env.example
+
+# runtime data (datasets, recordings, eval outputs, sqlite)
+data/
+certs/
+
+# model weights
+*.pt
+*.onnx
+
+# python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+coverage.xml
+htmlcov/
+*.egg-info/
+build/
+dist/
+!frontend/dist/.gitkeep
+
+# node
+node_modules/
+frontend/dist/
+frontend/test-results/
+frontend/playwright-report/
+
+# editors / os
+.DS_Store
+.idea/
+.vscode/
+
+# Claude Code local permission settings
+.claude/settings.local.json
