@@ -70,6 +70,13 @@ class Settings(BaseSettings):
     scheduler_strategy: Literal["latest", "fifo"] = "latest"
     max_frame_bytes: int = Field(default=1_500_000, ge=10_000)
 
+    # --- websockets and liveness (E.3, F.7, F-CAM-1) -------------------------
+    ws_auth_timeout_s: float = Field(default=5.0, gt=0, le=60)
+    offline_after_s: float = Field(default=10.0, gt=0, le=600)
+    sweep_interval_s: float = Field(default=2.0, gt=0, le=60)
+    metrics_interval_s: float = Field(default=2.0, gt=0, le=60)
+    ack_every: int = Field(default=10, ge=1, le=1000)
+
     # --- modes ---------------------------------------------------------------
     eval_record: bool = False
     test_mode: bool = False

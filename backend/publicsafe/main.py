@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import asyncio
+import contextlib
 import datetime as dt
 import logging
 import time
-from collections.abc import Awaitable, Callable, MutableMapping
+from collections.abc import AsyncIterator, Awaitable, Callable, MutableMapping
 from pathlib import Path
 from typing import Any
 
@@ -20,7 +22,7 @@ from starlette.datastructures import MutableHeaders
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from publicsafe import __version__
-from publicsafe.api import auth, cameras, health, security, sessions, zones
+from publicsafe.api import auth, cameras, health, metrics, pairing, security, sessions, zones
 from publicsafe.api import test as test_api
 from publicsafe.api.auth import AdminAuth
 from publicsafe.api.errors import STATUS_CODES, ApiError, error_body
@@ -28,6 +30,9 @@ from publicsafe.api.ratelimit import SlidingWindowLimiter
 from publicsafe.config import DOCS_DIR, ConfigError, Settings, get_settings, startup_checks
 from publicsafe.db import migrate
 from publicsafe.db.base import make_engine, make_sessionmaker, resolve_database_url
+from publicsafe.ws import camera as ws_camera
+from publicsafe.ws import dashboard as ws_dashboard
+from publicsafe.ws.hub import Hub, metrics_loop, sweep_loop
 
 log = logging.getLogger("publicsafe")
 
@@ -174,6 +179,28 @@ def db_status(app: FastAPI) -> str:
         return "error"
 
 
+@contextlib.asynccontextmanager
+async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+    """Bind the hub to the running loop and run the sweeper and metrics pushers."""
+    settings: Settings = app.state.settings
+    hub: Hub = app.state.hub
+    hub.bind_loop(asyncio.get_running_loop())
+    await hub.mark_live_cameras_offline()
+    tasks = [
+        asyncio.create_task(sweep_loop(hub, settings.sweep_interval_s), name="sweeper"),
+        asyncio.create_task(metrics_loop(hub, settings.metrics_interval_s), name="metrics"),
+    ]
+    try:
+        yield
+    finally:
+        for task in tasks:
+            task.cancel()
+        for task in tasks:
+            with contextlib.suppress(asyncio.CancelledError):
+                await task
+        await hub.close_all()
+
+
 def create_app(settings: Settings | None = None) -> FastAPI:
     """Build the application. ``settings`` is injectable for tests."""
     settings = settings or get_settings()
@@ -188,6 +215,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         docs_url="/api/docs",
         openapi_url="/api/openapi.json",
         redoc_url=None,
+        lifespan=lifespan,
     )
     app.state.settings = settings
     app.state.started_at = time.monotonic()
@@ -208,6 +236,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         ) from None
     app.state.limiters = {name: SlidingWindowLimiter(rules) for name, rules in RATE_LIMITS.items()}
     app.state.db_status = lambda: db_status(app)
+    hub = Hub(app.state.sessionmaker, settings)
+    app.state.hub = hub
+    app.state.close_camera_sockets = hub.close_cameras_threadsafe
+    app.state.push_camera_settings = hub.push_settings_threadsafe
 
     _install_error_handlers(app)
     app.include_router(health.router)
@@ -216,6 +248,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(cameras.router)
     app.include_router(zones.router)
     app.include_router(security.router)
+    app.include_router(pairing.admin_router)
+    app.include_router(pairing.public_router)
+    app.include_router(metrics.router)
+    app.include_router(ws_camera.router)
+    app.include_router(ws_dashboard.router)
     if settings.test_mode:
         app.include_router(test_api.router)
     _install_help_pages(app)

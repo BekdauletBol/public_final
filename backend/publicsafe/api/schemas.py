@@ -10,13 +10,13 @@ from pydantic import BaseModel, ConfigDict, Field, PlainSerializer, field_valida
 from publicsafe.core.rules import DEFAULT_RULE, RuleId
 
 
-def _iso_ms(value: dt.datetime) -> str:
+def iso_ms(value: dt.datetime) -> str:
+    """ISO-8601 UTC with milliseconds, e.g. ``2026-10-10T12:00:00.123Z``."""
     value = value.astimezone(dt.UTC)
     return value.strftime("%Y-%m-%dT%H:%M:%S.") + f"{value.microsecond // 1000:03d}Z"
 
 
-#: ISO-8601 UTC with milliseconds, e.g. ``2026-10-10T12:00:00.123Z``.
-UtcMs = Annotated[dt.datetime, PlainSerializer(_iso_ms, return_type=str)]
+UtcMs = Annotated[dt.datetime, PlainSerializer(iso_ms, return_type=str)]
 
 
 class ApiModel(BaseModel):
@@ -173,6 +173,59 @@ class ZoneOut(ApiModel):
     needs_review: bool
     created_at: UtcMs
     updated_at: UtcMs
+
+
+# --- pairing (Section G) ---------------------------------------------------
+
+
+class PairingCodeCreate(StrictModel):
+    camera_name_hint: str | None = Field(None, max_length=80)
+    replace_camera_id: str | None = Field(None, max_length=36)
+
+    _strip = field_validator("camera_name_hint", mode="before")(_strip)
+
+
+class PairingCodeMinted(BaseModel):
+    code_id: str
+    pin: str
+    expires_at: UtcMs
+    pair_url: str
+    ttl_seconds: int
+
+
+class PairingCodeOut(BaseModel):
+    code_id: str
+    status: str
+    created_at: UtcMs
+    expires_at: UtcMs
+    attempts: int
+    max_attempts: int
+    redeemed_camera_id: str | None
+    replace_camera_id: str | None
+    camera_name_hint: str | None
+
+
+class RedeemIn(StrictModel):
+    pin: str = Field(min_length=1, max_length=32)
+    code_id: str | None = Field(None, max_length=36)
+    device_label: str | None = Field(None, max_length=60)
+    remember: bool = False
+
+    _strip = field_validator("device_label", mode="before")(_strip)
+
+
+class RedeemOut(BaseModel):
+    camera_id: str
+    camera_name: str
+    session_name: str
+    device_token: str
+    ws_url: str
+    settings: CameraSettings
+
+
+class PrecheckOut(BaseModel):
+    server_time_ms: float
+    version: str
 
 
 # --- security log ----------------------------------------------------------
