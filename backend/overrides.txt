@@ -1,0 +1,5 @@
+# uv override file (used by `make lock`).
+# ultralytics declares `opencv-python` (the GUI build). public.safe ships
+# opencv-python-headless instead (spec E.1); the always-false marker removes
+# the GUI requirement from the resolution so only one cv2 is installed.
+opencv-python ; sys_platform == "never"

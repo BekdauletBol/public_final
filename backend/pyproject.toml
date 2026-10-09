@@ -1,0 +1,94 @@
+[build-system]
+requires = ["setuptools>=75", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "publicsafe"
+version = "0.1.0"
+description = "public.safe - smartphones as camera nodes for pedestrian danger-zone monitoring"
+readme = "../README.md"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+  "fastapi==0.143.0",
+  "uvicorn[standard]==0.54.0",
+  "sqlalchemy==2.1.4",
+  "alembic==1.20.0",
+  "pydantic==2.14.0",
+  "pydantic-settings==2.15.0",
+  "argon2-cffi==25.1.0",
+  "shapely==2.2.0",
+  "numpy==2.5.3",
+  "opencv-python-headless==4.14.0.94",
+  "ultralytics==8.4.174",
+  "torch==2.14.1",
+  "torchvision==0.29.1",
+  "structlog==26.1.0",
+  "typer==0.27.3",
+  "psutil==7.2.2",
+  "pyyaml==6.0.3",
+  "scipy==1.18.1",
+  "matplotlib==3.11.2",
+  "markdown==3.11",
+  "psycopg[binary]==3.3.6",
+  "python-multipart==0.0.32",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest==9.1.1",
+  "pytest-asyncio==1.4.0",
+  "pytest-cov==7.1.0",
+  "httpx==0.28.1",
+  "hypothesis==6.168.5",
+  "mypy==2.4.0",
+  "ruff==0.17.0",
+  "black==26.10.0",
+  "detect-secrets==1.5.0",
+  "types-PyYAML",
+  "types-psutil",
+  "types-Markdown",
+]
+
+[project.scripts]
+publicsafe = "publicsafe.cli:app"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["publicsafe*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+addopts = "-ra"
+markers = [
+  "model: needs the real YOLOv8n weights (make test-model)",
+  "load: load test against a live server (make test-load)",
+  "browser: Playwright browser test (make test-browser)",
+]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+extend-exclude = ["publicsafe/migrations/versions"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "N", "W", "SIM", "RUF"]
+ignore = ["RUF012"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["B011"]
+"publicsafe/**/cli.py" = ["B008"]  # typer.Option() defaults are the documented idiom
+
+[tool.black]
+line-length = 100
+target-version = ["py312"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+warn_unreachable = true
+files = ["publicsafe/core"]
+
+[tool.coverage.run]
+source = ["publicsafe"]
+branch = true
