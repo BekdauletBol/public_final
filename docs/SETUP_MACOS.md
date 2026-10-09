@@ -12,7 +12,7 @@ Nothing here needs a GitHub account.
 | Python | 3.12.13 (from `.python-version`) | installed by `uv` on first `make setup` |
 | Node.js | 24.21.0 (from `.nvmrc`) | `brew install nvm` then `nvm install` in the repo, or any Node 24 on PATH |
 | mkcert | 1.4.4 | `brew install mkcert` |
-| Docker Desktop | optional | only for the PostgreSQL smoke test |
+| Docker Desktop | optional | only for the PostgreSQL smoke test (`docker compose up -d db`, port 55432) |
 
 Without `uv`: create the venv manually and install the same pinned file:
 
@@ -34,11 +34,14 @@ make certs            # certs/dev.pem + certs/dev-key.pem for localhost, your LA
 [PHONE_SETUP.md](PHONE_SETUP.md)). Re-run `make certs` with
 `.venv/bin/publicsafe certs --force` whenever the Mac's LAN IP changes.
 
-From M1 on, set the admin password once:
+Set the admin password once (prompts twice, writes the argon2id hash to `.env`,
+logs out every admin session):
 
 ```bash
 .venv/bin/publicsafe admin set-password
 ```
+
+Non-interactive: `printf 'your-password\n' | .venv/bin/publicsafe admin set-password --password-stdin`.
 
 ## 3. Running
 
@@ -62,7 +65,10 @@ make test-load     # load test, from M3
 
 ## 5. Troubleshooting
 
-- **"Refusing to start: ADMIN_PASSWORD_HASH is not set"**: run `.venv/bin/publicsafe admin set-password` (M1).
+- **"Refusing to start: ADMIN_PASSWORD_HASH is not set"**: run `.venv/bin/publicsafe admin set-password`.
+- **"Database schema is at revision ..."**: `AUTO_MIGRATE=false` and the schema is behind; run `cd backend && ../.venv/bin/alembic upgrade head`.
+- **PostgreSQL round-trip test**: `docker compose up -d db`, then
+  `PUBLICSAFE_TEST_PG_URL=postgresql+psycopg://publicsafe:publicsafe@127.0.0.1:55432/publicsafe make test`.
 - **"SSL_CERTFILE not found"**: run `make certs`.
 - **Browser shows a certificate warning on the Mac**: run `mkcert -install`, then restart the browser.
 - **Phone shows a certificate warning**: install the root CA on the phone (PHONE_SETUP.md) and make sure the certificate was issued for the IP you are using (`make certs` output lists the names).
