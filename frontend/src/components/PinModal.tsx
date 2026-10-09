@@ -149,7 +149,8 @@ export function PinModal({
       {code && !redeemedCameraId && (
         <>
           <p className="muted small">
-            On the phone, open the pairing page and type this code, or scan the QR.
+            On the phone, open <span className="mono">/pair</span> and type this code. The QR and
+            link are shortcuts to the same page.
           </p>
           <div className="pin" aria-label={`PIN ${code.pin.split('').join(' ')}`}>
             {code.pin}
@@ -169,6 +170,12 @@ export function PinModal({
             )}
             {qr && <img className="qr" src={qr} alt="QR code of the pairing URL" />}
             <span className="pin-url">{code.pair_url}</span>
+            {code.pair_url_warning && (
+              <span className="warn small" role="note">
+                <span aria-hidden="true">⚠ </span>
+                {code.pair_url_warning}
+              </span>
+            )}
           </div>
           <div className="dialog-actions">
             <button type="button" className="btn" onClick={() => void copy()}>

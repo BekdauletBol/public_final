@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import datetime as dt
 import logging
+from collections.abc import Sequence
 
 from fastapi import APIRouter, Depends, Request, Response, status
 from sqlalchemy import func, select, update
@@ -22,6 +23,7 @@ from publicsafe.api.schemas import (
     RedeemIn,
     RedeemOut,
 )
+from publicsafe.certs import lan_ipv4_addresses
 from publicsafe.config import Settings
 from publicsafe.core.timing import now_ms
 from publicsafe.db.base import utcnow
@@ -50,12 +52,57 @@ admin_router = APIRouter(prefix="/api", tags=["pairing"], dependencies=[Depends(
 public_router = APIRouter(prefix="/api/pair", tags=["pairing"])
 
 
-def base_url(request: Request, settings: Settings) -> str:
-    """Origin for pairing URLs: PUBLIC_URL or the request's own host (works behind Vite)."""
+#: Hosts a phone can never reach: bind-all and loopback names.
+UNREACHABLE_HOSTS = {"0.0.0.0", "::", "[::]", "localhost", "127.0.0.1", "::1", "[::1]"}
+
+
+def split_host_port(netloc: str) -> tuple[str, str | None]:
+    """``"192.168.0.20:8443" -> ("192.168.0.20", "8443")``; handles ``[v6]:port``."""
+    if netloc.startswith("["):
+        host, _, rest = netloc.partition("]")
+        host += "]"
+        port = rest[1:] if rest.startswith(":") else None
+        return host, port or None
+    host, sep, port = netloc.rpartition(":")
+    if sep and port.isdigit():
+        return host, port
+    return netloc, None
+
+
+def phone_origin(
+    request: Request, settings: Settings, lan_ips: Sequence[str] | None = None
+) -> tuple[str, str | None]:
+    """Origin for pairing URLs plus an optional warning.
+
+    ``PUBLIC_URL`` wins. Otherwise the request's ``Host`` header is used, except
+    that a wildcard or loopback host is replaced by this Mac's first LAN IPv4
+    address (the same detection ``make certs`` uses). The warning is shown in
+    the PIN modal; the PIN itself works regardless of the URL.
+    """
     if settings.public_url:
-        return settings.public_url.rstrip("/")
-    host = request.headers.get("host") or request.url.netloc
-    return f"{request.url.scheme}://{host}"
+        return settings.public_url.rstrip("/"), None
+    scheme = request.url.scheme
+    netloc = request.headers.get("host") or request.url.netloc
+    host, port = split_host_port(netloc)
+    if host.lower() not in UNREACHABLE_HOSTS:
+        return f"{scheme}://{netloc}", None
+    ips = list(lan_ips) if lan_ips is not None else lan_ipv4_addresses()
+    suffix = f":{port}" if port else ""
+    if ips:
+        return (
+            f"{scheme}://{ips[0]}{suffix}",
+            f"The dashboard is open at {host}, which a phone cannot reach; the link uses "
+            f"this Mac's LAN address {ips[0]} instead. Set PUBLIC_URL to override.",
+        )
+    return (
+        f"{scheme}://{netloc}",
+        f"The dashboard is open at {host}, which a phone cannot reach, and no LAN address "
+        "was found. Type the PIN on the phone, or set PUBLIC_URL.",
+    )
+
+
+def base_url(request: Request, settings: Settings) -> str:
+    return phone_origin(request, settings)[0]
 
 
 def ws_url(origin: str) -> str:
@@ -142,11 +189,13 @@ def mint_code(
     )
     db.add(code)
     db.flush()
+    origin, warning = phone_origin(request, settings)
     return PairingCodeMinted(
         code_id=code.id,
         pin=format_pin(pin),
         expires_at=code.expires_at,
-        pair_url=f"{base_url(request, settings)}/pair?c={code.id}",
+        pair_url=f"{origin}/pair?c={code.id}",
+        pair_url_warning=warning,
         ttl_seconds=settings.pin_ttl_seconds,
     )
 

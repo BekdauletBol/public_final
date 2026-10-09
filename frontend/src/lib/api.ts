@@ -207,6 +207,7 @@ export interface PairingCodeMinted {
   pin: string
   expires_at: string
   pair_url: string
+  pair_url_warning: string | null
   ttl_seconds: number
 }
 

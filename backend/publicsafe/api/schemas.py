@@ -190,6 +190,7 @@ class PairingCodeMinted(BaseModel):
     pin: str
     expires_at: UtcMs
     pair_url: str
+    pair_url_warning: str | None = None
     ttl_seconds: int
 
 

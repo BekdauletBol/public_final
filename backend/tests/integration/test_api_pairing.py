@@ -244,3 +244,19 @@ def test_remember_flag_only_in_security_log(tc: TestClient, remember: bool) -> N
     assert redeem(tc, pin=m["pin"], remember=remember).status_code == 200
     entry = next(e for e in tc.get("/api/security/log").json() if e["kind"] == "redeem_ok")
     assert entry["details"]["remember"] is remember
+
+
+def test_mint_pair_url_never_uses_bind_address(tc: TestClient, monkeypatch) -> None:
+    import publicsafe.api.pairing as pairing_module
+
+    monkeypatch.setattr(pairing_module, "lan_ipv4_addresses", lambda: ["192.168.0.20"])
+    s = tc_session(tc)
+    r = tc.post(f"/api/sessions/{s['id']}/pairing-codes", json={}, headers={"host": "0.0.0.0:8443"})
+    assert r.status_code == 201
+    assert r.json()["pair_url"].startswith("https://192.168.0.20:8443/pair?c=")
+    assert "192.168.0.20" in r.json()["pair_url_warning"]
+    r = tc.post(
+        f"/api/sessions/{s['id']}/pairing-codes", json={}, headers={"host": "192.168.0.20:5173"}
+    )
+    assert r.json()["pair_url"].startswith("https://192.168.0.20:5173/pair?c=")
+    assert r.json()["pair_url_warning"] is None
