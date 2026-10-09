@@ -7,11 +7,16 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 
-from publicsafe.config import SET_PASSWORD_COMMAND, ConfigError, startup_checks
+from publicsafe.config import SET_PASSWORD_COMMAND, ConfigError, Settings, startup_checks
 
 
-def test_defaults(make_settings) -> None:
-    s = make_settings()
+def raw_settings() -> Settings:
+    """Settings from the (cleaned) environment only, without the test fixture's defaults."""
+    return Settings(_env_file=None)  # type: ignore[call-arg]
+
+
+def test_defaults() -> None:
+    s = raw_settings()
     assert s.port == 8443
     assert s.app_env == "development"
     assert s.pin_alphabet == "letters"
@@ -39,10 +44,10 @@ def test_env_parsing(monkeypatch: pytest.MonkeyPatch, make_settings) -> None:
     assert s.inference_device == "cpu"
 
 
-def test_blank_values_are_unset(monkeypatch: pytest.MonkeyPatch, make_settings) -> None:
+def test_blank_values_are_unset(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("ADMIN_PASSWORD_HASH", "")
     monkeypatch.setenv("INFERENCE_DEVICE", "  ")
-    s = make_settings()
+    s = raw_settings()
     assert s.admin_password_hash is None
     assert s.inference_device is None
 
@@ -87,6 +92,7 @@ def test_missing_certs_refuses_start(tmp_path: Path, make_settings) -> None:
         admin_password_hash="h",
         ssl_certfile=tmp_path / "no.pem",
         ssl_keyfile=tmp_path / "no-key.pem",
+        test_mode=False,
     )
     with pytest.raises(ConfigError) as excinfo:
         startup_checks(s)
