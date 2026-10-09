@@ -43,10 +43,11 @@ certs: ## issue certs/dev.pem + dev-key.pem with mkcert for localhost, LAN IPs a
 	$(BIN)/publicsafe certs
 
 dev: ## backend on https://0.0.0.0:8443 (reload) + Vite on https://0.0.0.0:5173 (proxy /api, /ws)
-	trap 'kill 0' INT TERM EXIT
-	$(BIN)/publicsafe run --reload &
+	$(BIN)/publicsafe run --reload & backend=$$!
+	sleep 2
+	if ! kill -0 $$backend 2>/dev/null; then echo "backend exited early (see the messages above)"; wait $$backend; exit 1; fi
+	trap 'kill $$backend 2>/dev/null; wait $$backend 2>/dev/null' EXIT INT TERM
 	cd frontend && $(NODE_ENV); $(NPM) run dev
-	wait
 
 build: ## build the frontend into frontend/dist
 	cd frontend && $(NODE_ENV); $(NPM) run build

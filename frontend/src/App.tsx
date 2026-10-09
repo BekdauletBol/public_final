@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Navigate, Outlet, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import { ApiError, UNAUTHENTICATED_EVENT, auth } from './lib/api'
 import { Loading } from './components/States'
+import { ErrorBoundary } from './components/ErrorBoundary'
 import { Shell } from './components/Shell'
 import { Login } from './pages/Login'
 import { Sessions } from './pages/Sessions'
@@ -58,21 +59,23 @@ function NotFound() {
 
 export default function App() {
   return (
-    <Routes>
-      <Route path="/login" element={<Login />} />
-      <Route path="/pair" element={<Placeholder title="Pair this phone" milestone="M3" />} />
-      <Route path="/camera" element={<Placeholder title="Camera" milestone="M3" />} />
-      <Route element={<RequireAuth />}>
-        <Route element={<Shell />}>
-          <Route index element={<Sessions />} />
-          <Route path="/sessions/:id" element={<SessionDetail />} />
-          <Route path="/cameras/:id" element={<Placeholder title="Camera" milestone="M3" />} />
-          <Route path="/events" element={<Placeholder title="Events" milestone="M4" />} />
-          <Route path="/security" element={<Security />} />
-          <Route path="/health" element={<Placeholder title="Health" milestone="M3" />} />
-          <Route path="*" element={<NotFound />} />
+    <ErrorBoundary>
+      <Routes>
+        <Route path="/login" element={<Login />} />
+        <Route path="/pair" element={<Placeholder title="Pair this phone" milestone="M3" />} />
+        <Route path="/camera" element={<Placeholder title="Camera" milestone="M3" />} />
+        <Route element={<RequireAuth />}>
+          <Route element={<Shell />}>
+            <Route index element={<Sessions />} />
+            <Route path="/sessions/:id" element={<SessionDetail />} />
+            <Route path="/cameras/:id" element={<Placeholder title="Camera" milestone="M3" />} />
+            <Route path="/events" element={<Placeholder title="Events" milestone="M4" />} />
+            <Route path="/security" element={<Security />} />
+            <Route path="/health" element={<Placeholder title="Health" milestone="M3" />} />
+            <Route path="*" element={<NotFound />} />
+          </Route>
         </Route>
-      </Route>
-    </Routes>
+      </Routes>
+    </ErrorBoundary>
   )
 }

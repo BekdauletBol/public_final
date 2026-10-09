@@ -76,6 +76,7 @@ export function backoffDelay(attempt: number, random: () => number = Math.random
 class DashboardSocket {
   private ws: WebSocket | null = null
   private timer: number | null = null
+  private stopTimer: number | null = null
   private listeners = new Set<Listener>()
   private stateListeners = new Set<() => void>()
   private wanted = false
@@ -88,18 +89,35 @@ class DashboardSocket {
   }
 
   start(): void {
+    if (this.stopTimer !== null) {
+      // A stop was scheduled a moment ago (React StrictMode re-runs effects): keep the socket.
+      window.clearTimeout(this.stopTimer)
+      this.stopTimer = null
+    }
     if (this.wanted) return
     this.wanted = true
     this.open()
   }
 
+  /** Deferred so that an unmount/remount pair does not abort a connecting socket. */
   stop(): void {
+    if (this.stopTimer !== null) return
+    this.stopTimer = window.setTimeout(() => {
+      this.stopTimer = null
+      this.stopNow()
+    }, 0)
+  }
+
+  stopNow(): void {
     this.wanted = false
     if (this.timer) window.clearTimeout(this.timer)
     this.timer = null
-    this.ws?.close(1000, 'client_stop')
+    const ws = this.ws
     this.ws = null
-    this.setState({ connected: false, attempt: 0 })
+    ws?.close(1000, 'client_stop')
+    if (this.state.connected || this.state.attempt !== 0) {
+      this.setState({ connected: false, attempt: 0 })
+    }
   }
 
   on(listener: Listener): () => void {
@@ -179,6 +197,11 @@ class DashboardSocket {
 
 export const dashboardSocket = new DashboardSocket()
 
+/**
+ * Read a slice of the live state. The selector MUST return a primitive or a
+ * reference that is stable between store updates (e.g. `s.connected`,
+ * `s.statuses[id]`); building a new object per call makes React re-render forever.
+ */
 export function useLive<T>(selector: (state: LiveState) => T): T {
   return useSyncExternalStore(dashboardSocket.subscribeState, () =>
     selector(dashboardSocket.getState()),

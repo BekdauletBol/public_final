@@ -3,6 +3,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { NavLink, Outlet, useNavigate, useOutletContext } from 'react-router-dom'
 import { auth, type Me } from '../lib/api'
 import { dashboardSocket, useLive, type CameraStatusMessage } from '../lib/ws'
+import { ErrorBoundary } from './ErrorBoundary'
 
 const NAV = [
   { to: '/', label: 'Sessions', end: true },
@@ -15,11 +16,9 @@ export function Shell() {
   const me = useOutletContext<Me>()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
-  const live = useLive((s) => ({
-    connected: s.connected,
-    attempt: s.attempt,
-    ever: s.everConnected,
-  }))
+  const connected = useLive((s) => s.connected)
+  const attempt = useLive((s) => s.attempt)
+  const everConnected = useLive((s) => s.everConnected)
   const logout = useMutation({
     mutationFn: auth.logout,
     onSettled: () => {
@@ -76,13 +75,15 @@ export function Shell() {
           </button>
         </div>
       </header>
-      {!live.connected && live.ever && (
+      {!connected && everConnected && (
         <div className="banner" role="status">
-          Live updates paused, reconnecting… {live.attempt > 0 ? `(attempt ${live.attempt})` : ''}
+          Live updates paused, reconnecting… {attempt > 0 ? `(attempt ${attempt})` : ''}
         </div>
       )}
       <main className="shell">
-        <Outlet context={me} />
+        <ErrorBoundary>
+          <Outlet context={me} />
+        </ErrorBoundary>
       </main>
     </div>
   )

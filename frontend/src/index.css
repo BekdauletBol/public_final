@@ -273,8 +273,16 @@ code,
   margin-top: var(--space-12);
 }
 
-.login h1 {
-  margin-bottom: var(--space-6);
+.login-card {
+  padding: var(--space-8) var(--space-6);
+}
+
+.login-card h1 {
+  margin-bottom: var(--space-1);
+}
+
+.login-card p {
+  margin: 0;
 }
 
 /* ---- surfaces -------------------------------------------------------------- */

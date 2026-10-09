@@ -49,8 +49,11 @@ export function Login() {
 
   return (
     <main className="shell login">
-      <h1>public.safe</h1>
-      <form className="card form" onSubmit={onSubmit} aria-describedby="login-error">
+      <form className="card form login-card" onSubmit={onSubmit} aria-describedby="login-error">
+        <div>
+          <h1>public.safe</h1>
+          <p className="muted small">Admin console</p>
+        </div>
         <label>
           Username
           <input
