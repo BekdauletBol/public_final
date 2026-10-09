@@ -7,9 +7,10 @@ against a per-camera polygon, turns per-frame membership into entry/exit events
 with hysteresis, and shows everything live on a web dashboard. The same code
 runs offline on public datasets for reproducible evaluation.
 
-Status: **M1** (HTTPS, database and migrations, admin login, sessions, cameras
-and zones CRUD, dashboard login/sessions pages). Pairing, streaming and detection
-arrive in M2-M4; see `publicsafe-cli-spec.md`.
+Status: **M2** (HTTPS, database, admin login, sessions/cameras/zones CRUD, PIN
+pairing with device tokens, camera and dashboard WebSockets with live status,
+security log page). Phone streaming and detection arrive in M3-M4; see
+`publicsafe-cli-spec.md`.
 
 ## Quick start (macOS, Apple Silicon)
 
