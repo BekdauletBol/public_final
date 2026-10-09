@@ -3,6 +3,7 @@
 
 import { useSyncExternalStore } from 'react'
 import { UNAUTHENTICATED_EVENT, type CameraStatus } from './api'
+import { frameStore, type FrameResultMsg } from './frames'
 
 export interface CameraStatusMessage {
   type: 'camera_status'
@@ -13,20 +14,43 @@ export interface CameraStatusMessage {
   reason: string | null
 }
 
+export type Percentiles = {
+  p50: number | null
+  p90: number | null
+  p95: number | null
+  p99: number | null
+}
+
 export interface CameraMetrics {
   status: CameraStatus
-  connected_s: number
+  connected_s: number | null
   last_seen_at: string | null
   frames_in: number
   bytes_in: number
+  processed: number
+  processed_seq: number | null
+  dropped_replaced: number
+  dropped_ratelimit: number
+  decode_errors: number
+  worker_errors: number
   out_of_order: number
   rtt_ms: number | null
   clock_offset_ms: number | null
   clock_offset_uncertainty_ms: number | null
-  fps_in: number | null
-  fps_processed: number | null
-  drop_ratio: number | null
-  spans: Record<string, number | null> | null
+  fps_in: number
+  fps_processed: number
+  drop_ratio: number
+  last_w: number | null
+  last_h: number | null
+  target_fps: number | null
+  privacy_mode: boolean | null
+  spans: {
+    total: Percentiles
+    infer: Percentiles
+    decode: Percentiles
+    queue_wait: Percentiles
+    e2e_estimate: Percentiles
+  }
 }
 
 export interface MetricsMessage {
@@ -38,9 +62,11 @@ export interface MetricsMessage {
     cpu_percent: number
     mem_mb: number
     device: string | null
+    model_sha256: string | null
     active_cameras: number
     dashboards: number
     scheduler_strategy: string
+    scheduler_backlog: number
     eval_record: boolean
   }
   cameras: Record<string, CameraMetrics>
@@ -80,6 +106,7 @@ class DashboardSocket {
   private listeners = new Set<Listener>()
   private stateListeners = new Set<() => void>()
   private wanted = false
+  private pendingPreview: { camera_id: string; seq: number } | null = null
   state: LiveState = {
     connected: false,
     attempt: 0,
@@ -141,13 +168,25 @@ class DashboardSocket {
     if (!this.wanted) return
     const scheme = window.location.protocol === 'https:' ? 'wss' : 'ws'
     const ws = new WebSocket(`${scheme}://${window.location.host}/ws/dashboard`)
+    ws.binaryType = 'arraybuffer'
     this.ws = ws
     ws.onopen = () => {
       this.setState({ connected: true, attempt: 0, everConnected: true })
       ws.send(JSON.stringify({ type: 'subscribe', camera_ids: 'all', preview_fps: 10 }))
     }
     ws.onmessage = (event) => {
-      if (typeof event.data !== 'string') return // binary previews arrive in M3
+      if (typeof event.data !== 'string') {
+        const pending = this.pendingPreview
+        this.pendingPreview = null
+        if (pending && event.data instanceof ArrayBuffer) {
+          frameStore.setFrame(
+            pending.camera_id,
+            new Blob([event.data], { type: 'image/jpeg' }),
+            pending.seq,
+          )
+        }
+        return
+      }
       let message: ServerMessage
       try {
         message = JSON.parse(event.data) as ServerMessage
@@ -191,6 +230,11 @@ class DashboardSocket {
       })
     } else if (message.type === 'metrics') {
       this.setState({ metrics: message as MetricsMessage })
+    } else if (message.type === 'frame_preview') {
+      const m = message as unknown as { camera_id: string; seq: number }
+      this.pendingPreview = { camera_id: m.camera_id, seq: m.seq }
+    } else if (message.type === 'frame_result') {
+      frameStore.setResult(message as unknown as FrameResultMsg)
     }
   }
 }

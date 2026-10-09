@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { CameraTile } from '../components/CameraTile'
 import { Dialog } from '../components/Dialog'
+import { MetricsPanel } from '../components/MetricsPanel'
 import { PinModal } from '../components/PinModal'
 import { EmptyState, ErrorState, Loading } from '../components/States'
 import { errorMessage } from '../lib/errors'
@@ -126,6 +127,8 @@ export function SessionDetail() {
           ))}
         </div>
       )}
+
+      <MetricsPanel cameras={s.cameras} />
 
       <PinModal
         key={pin.nonce}

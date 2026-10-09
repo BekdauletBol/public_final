@@ -9,6 +9,10 @@ import { Login } from './pages/Login'
 import { Sessions } from './pages/Sessions'
 import { SessionDetail } from './pages/SessionDetail'
 import { Security } from './pages/Security'
+import { Health } from './pages/Health'
+import { CameraDetail } from './pages/CameraDetail'
+import { Pair } from './pages/Pair'
+import { Camera } from './pages/Camera'
 
 function RequireAuth() {
   const location = useLocation()
@@ -62,16 +66,16 @@ export default function App() {
     <ErrorBoundary>
       <Routes>
         <Route path="/login" element={<Login />} />
-        <Route path="/pair" element={<Placeholder title="Pair this phone" milestone="M3" />} />
-        <Route path="/camera" element={<Placeholder title="Camera" milestone="M3" />} />
+        <Route path="/pair" element={<Pair />} />
+        <Route path="/camera" element={<Camera />} />
         <Route element={<RequireAuth />}>
           <Route element={<Shell />}>
             <Route index element={<Sessions />} />
             <Route path="/sessions/:id" element={<SessionDetail />} />
-            <Route path="/cameras/:id" element={<Placeholder title="Camera" milestone="M3" />} />
+            <Route path="/cameras/:id" element={<CameraDetail />} />
             <Route path="/events" element={<Placeholder title="Events" milestone="M4" />} />
             <Route path="/security" element={<Security />} />
-            <Route path="/health" element={<Placeholder title="Health" milestone="M3" />} />
+            <Route path="/health" element={<Health />} />
             <Route path="*" element={<NotFound />} />
           </Route>
         </Route>

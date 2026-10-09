@@ -61,9 +61,8 @@ test: ## unit + integration + security + cv tests (no network, no GPU, FakeDetec
 test-model: ## real YOLOv8n on the golden image (downloads weights once)
 	cd backend && $(PY) -m pytest -m model -q
 
-test-browser: ## Playwright (Chromium) end-to-end tests
-	@if [ -f frontend/playwright.config.ts ]; then cd frontend && $(NODE_ENV); npx playwright test; \
-	else echo "test-browser: the Playwright suite arrives in M3"; fi
+test-browser: build ## Playwright (Chromium) end-to-end tests against a TEST_MODE backend on :8445
+	cd frontend && $(NODE_ENV); npx playwright test
 
 test-load: ## load test against a TEST_MODE server; asserts fairness and memory bound
 	@if [ -f backend/tests/load/run_loadtest.py ]; then $(PY) backend/tests/load/run_loadtest.py; \

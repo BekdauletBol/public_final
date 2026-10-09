@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom'
 import type { CameraSummary } from '../lib/api'
 import { formatRelative } from '../lib/format'
 import { useLive } from '../lib/ws'
+import { LiveView } from './LiveView'
 import { StatusBadge } from './StatusBadge'
 
 interface CameraTileProps {
@@ -13,6 +14,7 @@ interface CameraTileProps {
 /** Camera grid tile: the frame area is the hero; live status comes from the socket. */
 export function CameraTile({ camera, onReplace, onRevoke }: CameraTileProps) {
   const live = useLive((s) => s.statuses[camera.id])
+  const m = useLive((s) => s.metrics?.cameras[camera.id])
   const status = live?.status ?? camera.status
   const lastSeen = live?.last_seen_at ?? camera.last_seen_at
   const revoked = status === 'revoked'
@@ -20,7 +22,7 @@ export function CameraTile({ camera, onReplace, onRevoke }: CameraTileProps) {
   return (
     <article className="tile" aria-label={`Camera ${camera.name}`}>
       <Link to={`/cameras/${camera.id}`} className="tile-frame" aria-label={`Open ${camera.name}`}>
-        {status === 'online' ? 'Live preview arrives in M3' : 'No frames'}
+        <LiveView cameraId={camera.id} maxFps={5} label={`Preview of ${camera.name}`} />
       </Link>
       <div className="tile-body">
         <div className="tile-head">
@@ -30,6 +32,9 @@ export function CameraTile({ camera, onReplace, onRevoke }: CameraTileProps) {
           <StatusBadge status={status} />
         </div>
         <div className="small muted">
+          {m
+            ? `${m.fps_in.toFixed(0)} in / ${m.fps_processed.toFixed(0)} fps · ${(m.drop_ratio * 100).toFixed(0)} % dropped · `
+            : ''}
           Last seen {formatRelative(lastSeen)} · {camera.zone_count}{' '}
           {camera.zone_count === 1 ? 'zone' : 'zones'}
           {camera.needs_review && (
