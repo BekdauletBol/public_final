@@ -1,18 +1,28 @@
 import { useState, type FormEvent } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useNavigate, useParams } from 'react-router-dom'
+import { CameraTile } from '../components/CameraTile'
 import { Dialog } from '../components/Dialog'
+import { PinModal } from '../components/PinModal'
 import { EmptyState, ErrorState, Loading } from '../components/States'
 import { errorMessage } from '../lib/errors'
-import { StatusBadge } from '../components/StatusBadge'
-import { sessions, type SessionDetail as SessionDetailData } from '../lib/api'
-import { formatRelative } from '../lib/format'
+import {
+  cameras,
+  sessions,
+  type CameraSummary,
+  type SessionDetail as SessionDetailData,
+} from '../lib/api'
 
 export function SessionDetail() {
   const { id = '' } = useParams()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const [dialog, setDialog] = useState<'rename' | 'delete' | null>(null)
+  const [pin, setPin] = useState<{ open: boolean; replace?: CameraSummary; nonce: number }>({
+    open: false,
+    nonce: 0,
+  })
+  const [revoking, setRevoking] = useState<CameraSummary | null>(null)
 
   const q = useQuery({ queryKey: ['session', id], queryFn: () => sessions.get(id) })
   const invalidate = () => {
@@ -22,6 +32,13 @@ export function SessionDetail() {
   const archive = useMutation({
     mutationFn: (archived: boolean) => sessions.patch(id, { archived }),
     onSuccess: invalidate,
+  })
+  const revoke = useMutation({
+    mutationFn: (cameraId: string) => cameras.revoke(cameraId),
+    onSuccess: () => {
+      setRevoking(null)
+      invalidate()
+    },
   })
   const remove = useMutation({
     mutationFn: () => sessions.remove(id),
@@ -60,7 +77,7 @@ export function SessionDetail() {
           >
             {s.archived_at ? 'Unarchive' : 'Archive'}
           </button>
-          <button type="button" className="btn btn-danger" onClick={() => setDialog('delete')}>
+          <button type="button" className="btn" onClick={() => setDialog('delete')}>
             Delete
           </button>
         </div>
@@ -76,52 +93,75 @@ export function SessionDetail() {
         <button
           type="button"
           className="btn btn-primary"
-          disabled
-          title="PIN pairing arrives in milestone M2"
+          onClick={() => setPin({ open: true, nonce: Date.now() })}
+          disabled={s.archived_at !== null}
+          title={s.archived_at ? 'Unarchive the session to add cameras' : undefined}
         >
           Add camera
         </button>
       </div>
       {s.cameras.length === 0 ? (
-        <EmptyState message="No cameras yet — add one to mint a pairing PIN." />
+        <EmptyState
+          message="No cameras yet — add one to mint a pairing PIN."
+          action={
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={() => setPin({ open: true, nonce: Date.now() })}
+              disabled={s.archived_at !== null}
+            >
+              Add camera
+            </button>
+          }
+        />
       ) : (
-        <div className="table-wrap">
-          <table className="table">
-            <thead>
-              <tr>
-                <th scope="col">Name</th>
-                <th scope="col">Status</th>
-                <th scope="col">Last seen</th>
-                <th scope="col">Zones</th>
-                <th scope="col">Device</th>
-              </tr>
-            </thead>
-            <tbody>
-              {s.cameras.map((c) => (
-                <tr key={c.id}>
-                  <td>
-                    <Link to={`/cameras/${c.id}`}>{c.name}</Link>
-                  </td>
-                  <td>
-                    <StatusBadge status={c.status} />
-                  </td>
-                  <td>{formatRelative(c.last_seen_at)}</td>
-                  <td>
-                    {c.zone_count}
-                    {c.needs_review && (
-                      <span className="warn" title="Frame size changed; verify the zone">
-                        {' '}
-                        <span aria-hidden="true">⚠</span> review
-                      </span>
-                    )}
-                  </td>
-                  <td className="muted">{c.device_label || '—'}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="camera-grid">
+          {s.cameras.map((c) => (
+            <CameraTile
+              key={c.id}
+              camera={c}
+              onReplace={(cam) => setPin({ open: true, replace: cam, nonce: Date.now() })}
+              onRevoke={(cam) => setRevoking(cam)}
+            />
+          ))}
         </div>
       )}
+
+      <PinModal
+        key={pin.nonce}
+        open={pin.open}
+        sessionId={s.id}
+        replaceCameraId={pin.replace?.id}
+        replaceCameraName={pin.replace?.name}
+        onClose={() => {
+          setPin({ open: false, nonce: 0 })
+          invalidate()
+        }}
+      />
+      <Dialog open={revoking !== null} title="Revoke phone?" onClose={() => setRevoking(null)}>
+        <p>
+          The phone paired as <strong>{revoking?.name}</strong> will be disconnected and its token
+          invalidated. Zones and events stay; use “Replace phone” to pair a new one later.
+        </p>
+        {revoke.isError && (
+          <p className="form-error" role="alert">
+            {errorMessage(revoke.error)}
+          </p>
+        )}
+        <div className="dialog-actions">
+          <button type="button" className="btn" onClick={() => setRevoking(null)}>
+            Cancel
+          </button>
+          <button
+            type="button"
+            className="btn btn-primary"
+            onClick={() => revoking && revoke.mutate(revoking.id)}
+            disabled={revoke.isPending}
+          >
+            Revoke
+          </button>
+        </div>
+      </Dialog>
 
       <RenameDialog
         open={dialog === 'rename'}
@@ -149,7 +189,7 @@ export function SessionDetail() {
           </button>
           <button
             type="button"
-            className="btn btn-danger"
+            className="btn btn-primary"
             onClick={() => remove.mutate()}
             disabled={remove.isPending}
           >

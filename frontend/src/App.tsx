@@ -7,6 +7,7 @@ import { Shell } from './components/Shell'
 import { Login } from './pages/Login'
 import { Sessions } from './pages/Sessions'
 import { SessionDetail } from './pages/SessionDetail'
+import { Security } from './pages/Security'
 
 function RequireAuth() {
   const location = useLocation()
@@ -67,7 +68,7 @@ export default function App() {
           <Route path="/sessions/:id" element={<SessionDetail />} />
           <Route path="/cameras/:id" element={<Placeholder title="Camera" milestone="M3" />} />
           <Route path="/events" element={<Placeholder title="Events" milestone="M4" />} />
-          <Route path="/security" element={<Placeholder title="Security" milestone="M2" />} />
+          <Route path="/security" element={<Security />} />
           <Route path="/health" element={<Placeholder title="Health" milestone="M3" />} />
           <Route path="*" element={<NotFound />} />
         </Route>

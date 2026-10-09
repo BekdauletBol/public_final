@@ -195,6 +195,44 @@ export const cameras = {
   list: (sessionId?: string) =>
     api.get<CameraSummary[]>(sessionId ? `/api/cameras?session_id=${sessionId}` : '/api/cameras'),
   get: (id: string) => api.get<CameraDetail>(`/api/cameras/${id}`),
+  patch: (id: string, body: { name?: string; settings?: Partial<CameraSettings> }) =>
+    api.patch<CameraDetail>(`/api/cameras/${id}`, body),
+  revoke: (id: string, reason?: string) =>
+    api.post<void>(`/api/cameras/${id}/revoke`, reason ? { reason } : {}),
+  remove: (id: string) => api.delete<void>(`/api/cameras/${id}`),
+}
+
+export interface PairingCodeMinted {
+  code_id: string
+  pin: string
+  expires_at: string
+  pair_url: string
+  ttl_seconds: number
+}
+
+export type PairingCodeStatus = 'pending' | 'redeemed' | 'expired' | 'locked' | 'cancelled'
+
+export interface PairingCode {
+  code_id: string
+  status: PairingCodeStatus
+  created_at: string
+  expires_at: string
+  attempts: number
+  max_attempts: number
+  redeemed_camera_id: string | null
+  replace_camera_id: string | null
+  camera_name_hint: string | null
+}
+
+export const pairing = {
+  mint: (sessionId: string, body: { camera_name_hint?: string; replace_camera_id?: string }) =>
+    api.post<PairingCodeMinted>(`/api/sessions/${sessionId}/pairing-codes`, body),
+  list: (sessionId: string) => api.get<PairingCode[]>(`/api/sessions/${sessionId}/pairing-codes`),
+  cancel: (codeId: string) => api.delete<void>(`/api/pairing-codes/${codeId}`),
+}
+
+export const security = {
+  log: (limit = 200) => api.get<SecurityLogEntry[]>(`/api/security/log?limit=${limit}`),
 }
 
 export const health = {

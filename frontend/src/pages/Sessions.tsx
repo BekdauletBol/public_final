@@ -55,15 +55,14 @@ export function Sessions() {
                 <Link to={`/sessions/${s.id}`} className="card-title">
                   {s.name}
                 </Link>
-                <div className="muted">
+                <div className="muted small">
                   {s.location_note ? `${s.location_note} · ` : ''}
                   created {formatDateTime(s.created_at)}
                   {s.archived_at ? ' · archived' : ''}
                 </div>
               </div>
               <div className="card-meta" title="online cameras / all cameras">
-                <span aria-hidden="true">📷 </span>
-                {s.online_count}/{s.camera_count} online
+                {s.online_count} of {s.camera_count} online
               </div>
             </li>
           ))}

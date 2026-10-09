@@ -1,0 +1,67 @@
+/* public.safe design tokens: the single source of colours, spacing and type.
+   Modern minimalist: one sans-serif, one accent, red/amber/green only for status. */
+
+:root {
+  --font-sans:
+    -apple-system, BlinkMacSystemFont, 'Inter', 'SF Pro Text', 'Segoe UI', Roboto, Helvetica, Arial,
+    sans-serif;
+  --font-mono: ui-monospace, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
+
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-md: 1rem;
+  --text-lg: 1.25rem;
+  --text-xl: 1.5rem;
+  --text-pin: 2.25rem;
+  --leading: 1.5;
+
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-12: 3rem;
+
+  --radius-sm: 4px;
+  --radius: 6px;
+  --border-w: 1px;
+  --touch: 44px;
+  --content-width: 72rem;
+
+  --bg: #fafafa;
+  --surface: #ffffff;
+  --fg: #141414;
+  --fg-muted: #6b6f76;
+  --border: #e4e5e7;
+  --border-strong: #c9cbd0;
+
+  --accent: #2563eb;
+  --accent-fg: #ffffff;
+  --accent-hover: #1d4ed8;
+
+  --status-green: #16a34a;
+  --status-amber: #d97706;
+  --status-red: #dc2626;
+
+  --backdrop: rgb(0 0 0 / 0.45);
+  color-scheme: light dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0f0f10;
+    --surface: #161618;
+    --fg: #f2f2f3;
+    --fg-muted: #9b9ea5;
+    --border: #2a2b2f;
+    --border-strong: #3b3d43;
+    --accent: #3b82f6;
+    --accent-fg: #0b0b0c;
+    --accent-hover: #60a5fa;
+    --status-green: #22c55e;
+    --status-amber: #f59e0b;
+    --status-red: #ef4444;
+    --backdrop: rgb(0 0 0 / 0.6);
+  }
+}
