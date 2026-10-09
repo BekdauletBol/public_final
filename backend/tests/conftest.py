@@ -104,3 +104,50 @@ async def make_zone(admin: httpx.AsyncClient, camera_id: str, **overrides: objec
     r = await admin.post(f"/api/cameras/{camera_id}/zones", json=body)
     assert r.status_code == 201, r.text
     return r.json()
+
+
+# --- synchronous client with lifespan (WebSocket tests) ----------------------
+
+
+@pytest.fixture
+def make_tc(make_settings: Callable[..., Settings]):
+    """Logged-in TestClient whose context runs the lifespan (sweeper, metrics)."""
+    from fastapi.testclient import TestClient
+
+    opened: list[TestClient] = []
+
+    def _make(**overrides: object) -> TestClient:
+        tc = TestClient(create_app(make_settings(**overrides)), base_url="https://testserver")
+        tc.__enter__()
+        opened.append(tc)
+        tc.headers.update(CSRF)
+        r = tc.post("/api/auth/login", json={"username": ADMIN_USER, "password": ADMIN_PASSWORD})
+        assert r.status_code == 204, r.text
+        return tc
+
+    yield _make
+    for tc in opened:
+        tc.__exit__(None, None, None)
+
+
+@pytest.fixture
+def tc(make_tc):
+    return make_tc()
+
+
+def tc_session(tc, name: str = "Main square") -> dict:
+    r = tc.post("/api/sessions", json={"name": name})
+    assert r.status_code == 201, r.text
+    return r.json()
+
+
+def tc_camera(tc, session_id: str, name: str = "cam") -> dict:
+    r = tc.post("/api/test/cameras", json={"session_id": session_id, "name": name})
+    assert r.status_code == 201, r.text
+    return r.json()
+
+
+def tc_mint(tc, session_id: str, **body: object) -> dict:
+    r = tc.post(f"/api/sessions/{session_id}/pairing-codes", json=body)
+    assert r.status_code == 201, r.text
+    return r.json()
