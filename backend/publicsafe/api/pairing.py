@@ -105,6 +105,15 @@ def base_url(request: Request, settings: Settings) -> str:
     return phone_origin(request, settings)[0]
 
 
+def request_origin(request: Request, settings: Settings) -> str:
+    """The origin the caller itself used (PUBLIC_URL wins). A phone that reached this
+    endpoint can reach the same host for its WebSocket, so no LAN fallback is applied."""
+    if settings.public_url:
+        return settings.public_url.rstrip("/")
+    netloc = request.headers.get("host") or request.url.netloc
+    return f"{request.url.scheme}://{netloc}"
+
+
 def ws_url(origin: str) -> str:
     if origin.startswith("https://"):
         return "wss://" + origin[len("https://") :] + "/ws/camera"
@@ -394,12 +403,12 @@ def redeem(body: RedeemIn, request: Request, db: Session = Depends(get_db)) -> R
     db.flush()
     db.commit()  # make the credential visible before the phone connects
 
+    hub = request.app.state.hub
     if replaced_camera_id is not None:
-        closer = getattr(request.app.state, "close_camera_sockets", None)
-        if closer is not None:
-            closer([replaced_camera_id], 4003, "replaced")
+        hub.close_cameras_threadsafe([replaced_camera_id], 4003, "replaced")
+    hub.announce_status_threadsafe(camera.id, session.id, "paired", "redeemed")
 
-    origin = base_url(request, settings)
+    origin = request_origin(request, settings)
     return RedeemOut(
         camera_id=camera.id,
         camera_name=camera.name,

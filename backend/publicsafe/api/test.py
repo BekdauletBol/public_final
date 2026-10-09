@@ -9,8 +9,15 @@ from fastapi import APIRouter, Depends, Request, status
 from sqlalchemy.orm import Session
 
 from publicsafe.api.deps import get_db, require_admin
+from publicsafe.api.errors import ApiError
 from publicsafe.api.ratelimit import client_ip
-from publicsafe.api.schemas import CameraSettings, TestCameraCreate, TestCameraOut
+from publicsafe.api.schemas import (
+    CameraSettings,
+    TestCameraCreate,
+    TestCameraOut,
+    TestDetectorScript,
+)
+from publicsafe.core.detector import FakeDetector
 from publicsafe.db.models import Camera, DeviceCredential
 from publicsafe.db.repo import get_session_or_404
 
@@ -42,3 +49,12 @@ def create_test_camera(
     )
     db.flush()
     return TestCameraOut(camera_id=camera.id, session_id=session.id, device_token=token)
+
+
+@router.post("/detector", status_code=status.HTTP_204_NO_CONTENT)
+def script_detector(body: TestDetectorScript, request: Request) -> None:
+    """Make the FakeDetector return the scripted detections in order, cycling (K)."""
+    detector = request.app.state.detector
+    if not isinstance(detector, FakeDetector):
+        raise ApiError(409, "detector_not_fake", "Start the server with DETECTOR=fake")
+    detector.set_script(body.script)

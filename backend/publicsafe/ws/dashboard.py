@@ -29,7 +29,10 @@ async def _sender(conn: DashboardConn) -> None:
     try:
         while True:
             message = await conn.queue.get()
-            await conn.ws.send_json(message)
+            if isinstance(message, bytes):
+                await conn.ws.send_bytes(message)
+            else:
+                await conn.ws.send_json(message)
     except (WebSocketDisconnect, RuntimeError, asyncio.CancelledError):
         pass
     except Exception:

@@ -50,13 +50,14 @@ def create_session(body: SessionCreate, db: Session = Depends(get_db)) -> Sessio
 
 
 @router.get("/{session_id}", response_model=SessionDetail)
-def get_session(session_id: str, db: Session = Depends(get_db)) -> SessionDetail:
+def get_session(session_id: str, request: Request, db: Session = Depends(get_db)) -> SessionDetail:
     row = get_session_or_404(db, session_id)
     cameras = list(
         db.scalars(select(Camera).where(Camera.session_id == row.id).order_by(Camera.created_at))
     )
     base = _out(row, camera_counts(db))
-    return SessionDetail(**base.model_dump(), cameras=camera_summaries(db, cameras))
+    live = request.app.state.hub.live_summary()
+    return SessionDetail(**base.model_dump(), cameras=camera_summaries(db, cameras, live))
 
 
 @router.patch("/{session_id}", response_model=SessionOut)

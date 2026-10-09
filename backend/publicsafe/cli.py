@@ -88,12 +88,13 @@ def certs(
     typer.echo("Full guide: docs/PHONE_SETUP.md (served at https://<host>:8443/help/phone)")
 
 
-if __name__ == "__main__":
-    app()
-
-
 admin_app = typer.Typer(help="Admin account management.", no_args_is_help=True)
 app.add_typer(admin_app, name="admin")
+
+
+from publicsafe.eval.cli import loadtest as _loadtest  # noqa: E402
+
+app.command("loadtest")(_loadtest)
 
 MIN_PASSWORD_LENGTH = 8
 
@@ -138,3 +139,7 @@ def admin_set_password(
     except Exception as exc:
         typer.secho(f"note: no admin sessions invalidated ({type(exc).__name__})", fg="yellow")
     typer.echo("Restart the server for the new password to take effect.")
+
+
+if __name__ == "__main__":
+    app()

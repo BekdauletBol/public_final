@@ -69,6 +69,10 @@ class Settings(BaseSettings):
     inference_imgsz: int = Field(default=640, ge=160, le=1920)
     scheduler_strategy: Literal["latest", "fifo"] = "latest"
     max_frame_bytes: int = Field(default=1_500_000, ge=10_000)
+    detector: Literal["none", "fake", "yolo"] = "none"
+    fake_detector_sleep_ms: float = Field(default=0.0, ge=0, le=5000)
+    rate_abuse_seconds: float = Field(default=10.0, gt=0, le=600)
+    metric_sample_interval_s: float = Field(default=5.0, gt=0, le=600)
 
     # --- websockets and liveness (E.3, F.7, F-CAM-1) -------------------------
     ws_auth_timeout_s: float = Field(default=5.0, gt=0, le=60)
@@ -80,6 +84,12 @@ class Settings(BaseSettings):
     # --- modes ---------------------------------------------------------------
     eval_record: bool = False
     test_mode: bool = False
+
+    @field_validator("ssl_certfile", "ssl_keyfile", "frontend_dist", "data_dir", mode="after")
+    @classmethod
+    def _anchor_to_root(cls, value: Path) -> Path:
+        """Relative paths in .env are relative to ``<root>``, whatever the working directory."""
+        return value if value.is_absolute() else ROOT_DIR / value
 
     @field_validator("admin_password_hash", "public_url", "inference_device", mode="before")
     @classmethod

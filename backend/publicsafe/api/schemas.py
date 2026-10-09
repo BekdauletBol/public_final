@@ -257,4 +257,8 @@ class TestCameraOut(BaseModel):
     device_token: str
 
 
+class TestDetectorScript(StrictModel):
+    script: list[list[dict[str, Any]]] = Field(max_length=10_000)
+
+
 CameraDetail.model_rebuild()

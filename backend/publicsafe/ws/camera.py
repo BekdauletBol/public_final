@@ -246,26 +246,36 @@ async def _handle_binary(
     conn.touch()
     conn.frames_in += 1
     conn.bytes_in += len(data)
+    stats = hub.stats_for(conn.camera_id)
     seq = int(meta["seq"])
     if seq <= conn.last_seq:
         conn.out_of_order += 1
+        stats.on_out_of_order()
     else:
         conn.last_seq = seq
     t_recv = now_ms()
     if conn.status == "offline":
         await hub.set_status(conn.camera_id, "online", "frame")
-    ingest = getattr(hub, "ingest", None)  # installed by the pipeline layer (M3)
-    if ingest is not None:
-        ingest(conn, meta, data, t_recv)
+
+    allowed, abusive = conn.rate_guard.observe()
+    if abusive:
+        stats.on_received(len(data), dropped_ratelimit=True)
+        await conn.close(4008, "rate_abuse", "Sustained frame rate above 3x the target")
+        return False
+    if allowed:
+        hub.ingest(conn, meta, data, t_recv)
+    else:
+        stats.on_received(len(data), dropped_ratelimit=True)
+
     if conn.frames_in % ack_every == 0:
         await conn.send_json(
             {
                 "type": "ack",
                 "seq": seq,
                 "t_server_recv_ms": t_recv,
-                "processed_seq": None,
-                "dropped_replaced": 0,
-                "dropped_ratelimit": 0,
+                "processed_seq": stats.processed_seq,
+                "dropped_replaced": stats.dropped_replaced,
+                "dropped_ratelimit": stats.dropped_ratelimit,
             }
         )
     return True
