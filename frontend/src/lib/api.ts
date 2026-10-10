@@ -232,6 +232,99 @@ export const pairing = {
   cancel: (codeId: string) => api.delete<void>(`/api/pairing-codes/${codeId}`),
 }
 
+export type EventType = 'zone_entered' | 'zone_cleared' | 'occupancy_changed'
+
+export interface ZoneEvent {
+  id: string
+  session_id: string
+  camera_id: string
+  zone_id: string | null
+  zone_name: string | null
+  type: EventType
+  t_server: string
+  frame_seq: number | null
+  count_before: number | null
+  count_after: number | null
+  active_rule: string | null
+  rule_counts: Record<string, number>
+  created_at: string
+}
+
+export interface EventFilters {
+  session_id?: string
+  camera_id?: string
+  zone_id?: string
+  type?: EventType | ''
+  from?: string
+  to?: string
+}
+
+function eventQuery(filters: EventFilters, extra: Record<string, string | number> = {}): string {
+  const params = new URLSearchParams()
+  for (const [k, v] of Object.entries({ ...filters, ...extra })) {
+    if (v !== undefined && v !== null && v !== '') params.set(k, String(v))
+  }
+  const q = params.toString()
+  return q ? `?${q}` : ''
+}
+
+export const events = {
+  list: (filters: EventFilters, limit = 100, cursor?: string) =>
+    api.get<{ items: ZoneEvent[]; next_cursor: string | null }>(
+      `/api/events${eventQuery(filters, { limit, ...(cursor ? { cursor } : {}) })}`,
+    ),
+  exportUrl: (filters: EventFilters) => `/api/events/export.csv${eventQuery(filters)}`,
+}
+
+export interface ZoneInput {
+  name: string
+  points: [number, number][]
+  frame_w: number
+  frame_h: number
+  active_rule: string
+  enter_frames: number
+  exit_frames: number
+  enabled: boolean
+}
+
+export const zones = {
+  list: (cameraId: string) => api.get<Zone[]>(`/api/cameras/${cameraId}/zones`),
+  create: (cameraId: string, body: ZoneInput) =>
+    api.post<Zone>(`/api/cameras/${cameraId}/zones`, body),
+  patch: (zoneId: string, body: Partial<ZoneInput>) =>
+    api.patch<Zone>(`/api/zones/${zoneId}`, body),
+  remove: (zoneId: string) => api.delete<void>(`/api/zones/${zoneId}`),
+}
+
+export const RULES: { id: string; label: string; description: string }[] = [
+  {
+    id: 'bottom_center',
+    label: 'Bottom centre',
+    description: 'Feet point (bottom-centre of the box) inside the zone',
+  },
+  {
+    id: 'three_point_any',
+    label: 'Any bottom point',
+    description: 'Any of bottom-left, bottom-centre, bottom-right inside',
+  },
+  {
+    id: 'three_point_majority',
+    label: 'Two of three',
+    description: 'At least two of the three bottom points inside',
+  },
+  { id: 'three_point_all', label: 'All three', description: 'All three bottom points inside' },
+  {
+    id: 'bottom_strip',
+    label: 'Bottom strip',
+    description: 'Lower 10 % strip of the box at least half inside',
+  },
+  {
+    id: 'bbox_overlap',
+    label: 'Box overlap',
+    description: 'Any overlap between the box and the zone (baseline)',
+  },
+]
+
 export const security = {
   log: (limit = 200) => api.get<SecurityLogEntry[]>(`/api/security/log?limit=${limit}`),
 }

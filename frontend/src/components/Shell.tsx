@@ -31,6 +31,10 @@ export function Shell() {
   useEffect(() => {
     dashboardSocket.start()
     const off = dashboardSocket.on((message) => {
+      if (message.type === 'event') {
+        void queryClient.invalidateQueries({ queryKey: ['events'] })
+        return
+      }
       if (message.type === 'camera_status') {
         const m = message as CameraStatusMessage
         if (m.reason === 'snapshot') return

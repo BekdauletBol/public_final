@@ -2,7 +2,7 @@
 // 1 s .. 30 s with +-20 % jitter, state readable through useSyncExternalStore.
 
 import { useSyncExternalStore } from 'react'
-import { UNAUTHENTICATED_EVENT, type CameraStatus } from './api'
+import { UNAUTHENTICATED_EVENT, type CameraStatus, type ZoneEvent } from './api'
 import { frameStore, type FrameResultMsg } from './frames'
 
 export interface CameraStatusMessage {
@@ -87,7 +87,10 @@ export interface LiveState {
     { status: CameraStatus; last_seen_at: string | null; session_id: string }
   >
   metrics: MetricsMessage | null
+  events: ZoneEvent[]
 }
+
+const MAX_LIVE_EVENTS = 200
 
 type Listener = (message: ServerMessage) => void
 
@@ -113,6 +116,7 @@ class DashboardSocket {
     everConnected: false,
     statuses: {},
     metrics: null,
+    events: [],
   }
 
   start(): void {
@@ -235,6 +239,9 @@ class DashboardSocket {
       this.pendingPreview = { camera_id: m.camera_id, seq: m.seq }
     } else if (message.type === 'frame_result') {
       frameStore.setResult(message as unknown as FrameResultMsg)
+    } else if (message.type === 'event') {
+      const ev = (message as unknown as { event: ZoneEvent }).event
+      this.setState({ events: [ev, ...this.state.events].slice(0, MAX_LIVE_EVENTS) })
     }
   }
 }

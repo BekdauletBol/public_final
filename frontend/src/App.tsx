@@ -13,6 +13,7 @@ import { Health } from './pages/Health'
 import { CameraDetail } from './pages/CameraDetail'
 import { Pair } from './pages/Pair'
 import { Camera } from './pages/Camera'
+import { Events } from './pages/Events'
 
 function RequireAuth() {
   const location = useLocation()
@@ -43,15 +44,6 @@ function RequireAuth() {
   return <Outlet context={me.data} />
 }
 
-function Placeholder({ title, milestone }: { title: string; milestone: string }) {
-  return (
-    <section>
-      <h1>{title}</h1>
-      <p className="muted">This page arrives in milestone {milestone}.</p>
-    </section>
-  )
-}
-
 function NotFound() {
   return (
     <section>
@@ -73,7 +65,7 @@ export default function App() {
             <Route index element={<Sessions />} />
             <Route path="/sessions/:id" element={<SessionDetail />} />
             <Route path="/cameras/:id" element={<CameraDetail />} />
-            <Route path="/events" element={<Placeholder title="Events" milestone="M4" />} />
+            <Route path="/events" element={<Events />} />
             <Route path="/security" element={<Security />} />
             <Route path="/health" element={<Health />} />
             <Route path="*" element={<NotFound />} />

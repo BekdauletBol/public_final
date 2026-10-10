@@ -3,16 +3,19 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { CameraTile } from '../components/CameraTile'
 import { Dialog } from '../components/Dialog'
+import { EventTable } from '../components/EventTable'
 import { MetricsPanel } from '../components/MetricsPanel'
 import { PinModal } from '../components/PinModal'
 import { EmptyState, ErrorState, Loading } from '../components/States'
 import { errorMessage } from '../lib/errors'
 import {
   cameras,
+  events as eventsApi,
   sessions,
   type CameraSummary,
   type SessionDetail as SessionDetailData,
 } from '../lib/api'
+import { useLive } from '../lib/ws'
 
 export function SessionDetail() {
   const { id = '' } = useParams()
@@ -26,6 +29,11 @@ export function SessionDetail() {
   const [revoking, setRevoking] = useState<CameraSummary | null>(null)
 
   const q = useQuery({ queryKey: ['session', id], queryFn: () => sessions.get(id) })
+  const recent = useQuery({
+    queryKey: ['events', { session_id: id, panel: true }],
+    queryFn: () => eventsApi.list({ session_id: id }, 50),
+  })
+  const liveEvents = useLive((s) => s.events)
   const invalidate = () => {
     void queryClient.invalidateQueries({ queryKey: ['session', id] })
     void queryClient.invalidateQueries({ queryKey: ['sessions'] })
@@ -127,6 +135,29 @@ export function SessionDetail() {
           ))}
         </div>
       )}
+
+      <section className="metrics">
+        <div className="page-head">
+          <h2>Events</h2>
+          <Link className="btn btn-sm" to="/events">
+            All events
+          </Link>
+        </div>
+        {(() => {
+          const fromQuery = recent.data?.items ?? []
+          const ids = new Set(fromQuery.map((e) => e.id))
+          const merged = [
+            ...liveEvents.filter((e) => e.session_id === id && !ids.has(e.id)),
+            ...fromQuery,
+          ].slice(0, 50)
+          const names = Object.fromEntries(s.cameras.map((c) => [c.id, c.name]))
+          return merged.length === 0 ? (
+            <p className="muted small">No events yet.</p>
+          ) : (
+            <EventTable events={merged} cameraNames={names} height={300} />
+          )
+        })()}
+      </section>
 
       <MetricsPanel cameras={s.cameras} />
 
