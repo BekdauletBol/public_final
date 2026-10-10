@@ -69,7 +69,7 @@ class Settings(BaseSettings):
     inference_imgsz: int = Field(default=640, ge=160, le=1920)
     scheduler_strategy: Literal["latest", "fifo"] = "latest"
     max_frame_bytes: int = Field(default=1_500_000, ge=10_000)
-    detector: Literal["none", "fake", "yolo"] = "none"
+    detector: Literal["none", "fake", "yolo"] = "yolo"
     fake_detector_sleep_ms: float = Field(default=0.0, ge=0, le=5000)
     rate_abuse_seconds: float = Field(default=10.0, gt=0, le=600)
     metric_sample_interval_s: float = Field(default=5.0, gt=0, le=600)
@@ -102,6 +102,16 @@ class Settings(BaseSettings):
     @property
     def log_level_name(self) -> str:
         return self.log_level.upper()
+
+    @property
+    def resolved_model_path(self) -> Path:
+        """``MODEL_PATH`` relative paths live under ``<data_dir>/models``."""
+        path = Path(self.model_path)
+        return path if path.is_absolute() else self.data_dir / "models" / path
+
+    @property
+    def recordings_dir(self) -> Path:
+        return self.data_dir / "recordings"
 
 
 def startup_checks(settings: Settings, *, require_tls: bool = True) -> list[str]:

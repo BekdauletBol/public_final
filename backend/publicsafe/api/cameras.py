@@ -131,6 +131,7 @@ def revoke_camera(
     hub = request.app.state.hub
     hub.close_cameras_threadsafe([camera.id], 4003, "revoked")
     hub.announce_status_threadsafe(camera.id, camera.session_id, "revoked", reason)
+    request.app.state.zones.remove(camera.id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 

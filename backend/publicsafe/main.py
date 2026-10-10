@@ -22,18 +22,30 @@ from starlette.datastructures import MutableHeaders
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from publicsafe import __version__
-from publicsafe.api import auth, cameras, health, metrics, pairing, security, sessions, zones
+from publicsafe.api import (
+    auth,
+    cameras,
+    events,
+    health,
+    metrics,
+    pairing,
+    security,
+    sessions,
+    zones,
+)
 from publicsafe.api import test as test_api
 from publicsafe.api.auth import AdminAuth
 from publicsafe.api.errors import STATUS_CODES, ApiError, error_body
 from publicsafe.api.ratelimit import SlidingWindowLimiter
 from publicsafe.config import DOCS_DIR, ConfigError, Settings, get_settings, startup_checks
-from publicsafe.core.detector import Detector, FakeDetector, NullDetector
+from publicsafe.core.detector import Detector, FakeDetector, NullDetector, UltralyticsDetector
 from publicsafe.core.mailbox import Scheduler
 from publicsafe.db import migrate
 from publicsafe.db.base import make_engine, make_sessionmaker, resolve_database_url
 from publicsafe.worker.inference import InferenceWorker
 from publicsafe.worker.pipeline import Pipeline
+from publicsafe.worker.recorder import Recorder
+from publicsafe.worker.zones import ZoneRegistry
 from publicsafe.ws import camera as ws_camera
 from publicsafe.ws import dashboard as ws_dashboard
 from publicsafe.ws.hub import Hub, metrics_loop, sample_loop, sweep_loop
@@ -177,7 +189,18 @@ def make_detector(settings: Settings) -> Detector:
     if settings.detector == "fake":
         return FakeDetector(sleep_ms=settings.fake_detector_sleep_ms)
     if settings.detector == "yolo":
-        raise ConfigError("DETECTOR=yolo arrives in M4; use none or fake for now")
+        try:
+            return UltralyticsDetector(
+                settings.resolved_model_path,
+                device=settings.inference_device,
+                imgsz=settings.inference_imgsz,
+                half=settings.inference_half,
+            )
+        except Exception as exc:
+            raise ConfigError(
+                f"Could not load the YOLOv8n detector ({type(exc).__name__}: {exc}). "
+                "Check MODEL_PATH / network access, or set DETECTOR=none for a pass-through run."
+            ) from None
     return NullDetector()
 
 
@@ -198,6 +221,9 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     hub: Hub = app.state.hub
     hub.bind_loop(asyncio.get_running_loop())
     await hub.mark_live_cameras_offline()
+    detector = app.state.detector
+    if isinstance(detector, UltralyticsDetector):
+        await asyncio.to_thread(detector.warm_up)
     worker: InferenceWorker = app.state.worker
     worker.start()
     tasks = [
@@ -215,6 +241,9 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
                 await task
         await hub.close_all()
         worker.stop()
+        recorder: Recorder | None = app.state.recorder
+        if recorder is not None:
+            recorder.close()
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -257,10 +286,20 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.close_camera_sockets = hub.close_cameras_threadsafe
     app.state.push_camera_settings = hub.push_settings_threadsafe
     app.state.detector = make_detector(settings)
+    hub.device = getattr(app.state.detector, "device", None)
+    hub.model_sha256 = getattr(app.state.detector, "model_sha256", None)
+    app.state.device = hub.device
+    app.state.model_sha256 = hub.model_sha256
+    app.state.zones = ZoneRegistry(app.state.sessionmaker)
+    app.state.zones.load_all()
+    app.state.recorder = Recorder(settings.recordings_dir) if settings.eval_record else None
     app.state.pipeline = Pipeline(
         publish=hub.publish_frame_threadsafe,
         settings_for=hub.camera_settings,
         detector=app.state.detector,
+        zones=app.state.zones,
+        on_event=hub.on_zone_event,
+        recorder=app.state.recorder,
     )
     app.state.worker = InferenceWorker(
         hub.scheduler, app.state.pipeline, hub.on_worker_result, hub.on_worker_error
@@ -273,6 +312,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(cameras.router)
     app.include_router(zones.router)
     app.include_router(security.router)
+    app.include_router(events.router)
     app.include_router(pairing.admin_router)
     app.include_router(pairing.public_router)
     app.include_router(metrics.router)

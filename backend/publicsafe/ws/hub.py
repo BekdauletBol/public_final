@@ -22,10 +22,12 @@ from publicsafe.api.schemas import iso_ms
 from publicsafe.config import Settings
 from publicsafe.core.mailbox import FrameRateGuard, Scheduler
 from publicsafe.core.models import Frame, FrameResult
+from publicsafe.core.state_machine import ZoneEvent
 from publicsafe.core.timing import ClockOffsetEstimator, now_ms
 from publicsafe.db.base import session_scope, utcnow
-from publicsafe.db.models import Camera, MetricSample
+from publicsafe.db.models import Camera, Event, MetricSample
 from publicsafe.worker.stats import CameraStats
+from publicsafe.worker.zones import ZoneRuntime
 
 log = logging.getLogger("publicsafe.ws")
 
@@ -401,6 +403,36 @@ class Hub:
     def on_worker_result(self, frame: Frame, result: FrameResult) -> None:
         """Worker-thread callback (the publish itself happened inside the pipeline)."""
 
+    def on_zone_event(
+        self,
+        frame: Frame,
+        result: FrameResult,
+        zone: ZoneRuntime,
+        event: ZoneEvent,
+        rule_counts: dict[str, int],
+    ) -> None:
+        """Worker-thread callback: persist the event, then push it to dashboards (F-CV-3/4)."""
+        t_server = dt.datetime.fromtimestamp(event.t_ms / 1000.0, tz=dt.UTC)
+        with session_scope(self.factory) as db:
+            row = Event(
+                session_id=zone.session_id,
+                camera_id=zone.camera_id,
+                zone_id=zone.zone_id,
+                zone_name=zone.name,
+                type=event.type,
+                t_server=t_server,
+                frame_seq=frame.seq,
+                count_before=event.count_before,
+                count_after=event.count_after,
+                active_rule=zone.active_rule.value,
+                rule_counts=rule_counts,
+            )
+            db.add(row)
+            db.flush()
+            message = event_to_json(row)
+        # Nested: the Event object has its own ``type`` (zone_entered, ...), see docs/API.md.
+        self.broadcast_threadsafe({"type": "event", "event": message}, zone.camera_id)
+
     def on_worker_error(self, frame: Frame, exc: BaseException) -> None:
         """Worker-thread callback: decode errors are counted; other errors mark the camera."""
         from publicsafe.worker.pipeline import DecodeError
@@ -530,6 +562,25 @@ class Hub:
             return written
 
         return await asyncio.to_thread(_db)
+
+
+def event_to_json(row: Event) -> dict[str, Any]:
+    """The ``Event`` object of F.6 (also used by the events API)."""
+    return {
+        "id": row.id,
+        "session_id": row.session_id,
+        "camera_id": row.camera_id,
+        "zone_id": row.zone_id,
+        "zone_name": row.zone_name,
+        "type": row.type,
+        "t_server": iso_ms(row.t_server),
+        "frame_seq": row.frame_seq,
+        "count_before": row.count_before,
+        "count_after": row.count_after,
+        "active_rule": row.active_rule,
+        "rule_counts": row.rule_counts or {},
+        "created_at": iso_ms(row.created_at),
+    }
 
 
 async def sweep_loop(hub: Hub, interval_s: float) -> None:

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import datetime as dt
 
-from fastapi import APIRouter, Depends, Response, status
+from fastapi import APIRouter, Depends, Request, Response, status
 from sqlalchemy.orm import Session
 
 from publicsafe.api.deps import get_db, require_admin
@@ -30,10 +30,18 @@ def list_zones(camera_id: str, db: Session = Depends(get_db)) -> list[ZoneOut]:
     return [ZoneOut.model_validate(z) for z in active_zones(db, camera_id)]
 
 
+def _sync_runtime(request: Request, db: Session, camera_id: str) -> None:
+    """Commit, then refresh the worker's view of this camera's zones (F-ZONE-3)."""
+    db.commit()
+    request.app.state.zones.reload(camera_id)
+
+
 @router.post(
     "/cameras/{camera_id}/zones", response_model=ZoneOut, status_code=status.HTTP_201_CREATED
 )
-def create_zone(camera_id: str, body: ZoneCreate, db: Session = Depends(get_db)) -> ZoneOut:
+def create_zone(
+    camera_id: str, body: ZoneCreate, request: Request, db: Session = Depends(get_db)
+) -> ZoneOut:
     camera = get_camera_or_404(db, camera_id)
     zone = Zone(
         camera_id=camera.id,
@@ -48,11 +56,15 @@ def create_zone(camera_id: str, body: ZoneCreate, db: Session = Depends(get_db))
     )
     db.add(zone)
     db.flush()
-    return ZoneOut.model_validate(zone)
+    out = ZoneOut.model_validate(zone)
+    _sync_runtime(request, db, camera.id)
+    return out
 
 
 @router.patch("/zones/{zone_id}", response_model=ZoneOut)
-def patch_zone(zone_id: str, body: ZonePatch, db: Session = Depends(get_db)) -> ZoneOut:
+def patch_zone(
+    zone_id: str, body: ZonePatch, request: Request, db: Session = Depends(get_db)
+) -> ZoneOut:
     zone = get_zone_or_404(db, zone_id)
     data = body.model_dump(exclude_unset=True)
     if data.get("points") is not None:
@@ -66,12 +78,15 @@ def patch_zone(zone_id: str, body: ZonePatch, db: Session = Depends(get_db)) -> 
         zone.needs_review = False  # re-drawn on the current frame size
     zone.updated_at = dt.datetime.now(dt.UTC)
     db.flush()
-    return ZoneOut.model_validate(zone)
+    out = ZoneOut.model_validate(zone)
+    _sync_runtime(request, db, zone.camera_id)
+    return out
 
 
 @router.delete("/zones/{zone_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_zone(zone_id: str, db: Session = Depends(get_db)) -> Response:
+def delete_zone(zone_id: str, request: Request, db: Session = Depends(get_db)) -> Response:
     zone = get_zone_or_404(db, zone_id)
     zone.deleted_at = dt.datetime.now(dt.UTC)
     db.flush()
+    _sync_runtime(request, db, zone.camera_id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
