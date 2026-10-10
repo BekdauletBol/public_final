@@ -7,10 +7,10 @@ against a per-camera polygon, turns per-frame membership into entry/exit events
 with hysteresis, and shows everything live on a web dashboard. The same code
 runs offline on public datasets for reproducible evaluation.
 
-Status: **M3** (HTTPS, database, admin login, sessions/cameras/zones CRUD, PIN
-pairing, phone capture page, frame ingest with a per-camera mailbox, live
-previews, metrics, load test). Detection, zones and events arrive in M4; see
-`publicsafe-cli-spec.md`.
+Status: **M4** (HTTPS, database, admin login, PIN pairing, phone capture,
+YOLOv8n person detection with all six membership rules, zone editor, events
+with hysteresis, overlays, CSV export, metrics, load test). The evaluation
+harness arrives in M5; see `publicsafe-cli-spec.md`.
 
 ## Quick start (macOS, Apple Silicon)
 
@@ -46,6 +46,15 @@ QR. On the phone open `https://<lan-ip>:5173/pair` (dev) or `:8443/pair`
 (`make run`), type the PIN and allow the camera. The phone page shows the
 connection state, send rate and last acknowledgement; "Forget this phone"
 removes the pairing.
+
+## Detection
+
+`DETECTOR=yolo` (default) loads YOLOv8n from `data/models/yolov8n.pt`, downloading
+it on the first start (needs network once). The device is chosen automatically
+(`mps` on Apple Silicon, else `cuda`, else `cpu`) or forced with
+`INFERENCE_DEVICE`. `make test-model` runs the real model on a golden image and
+prints FP16 vs FP32 timings; `INFERENCE_HALF` stays off unless that run shows a
+gain with the same detections.
 
 ## Load test
 

@@ -73,3 +73,5 @@ make test-load     # 3 fake phones at 15 fps, latest then fifo (LOADTEST_DURATIO
 - **Browser shows a certificate warning on the Mac**: run `mkcert -install`, then restart the browser.
 - **Phone shows a certificate warning**: install the root CA on the phone (PHONE_SETUP.md) and make sure the certificate was issued for the IP you are using (`make certs` output lists the names).
 - **`uv` not found**: `brew install uv`, or use the manual venv instructions above.
+- **"Could not load the YOLOv8n detector"**: the first start downloads `yolov8n.pt` into `data/models/`; check network access, or set `DETECTOR=none` to run without detection.
+- **"MPS unavailable"** (Intel Mac or old macOS): inference falls back to CPU automatically; lower the cameras' target fps (5) and max long edge (960) in the camera settings.
