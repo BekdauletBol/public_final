@@ -44,6 +44,7 @@ def make_settings(tmp_path: Path, admin_hash: str) -> Callable[..., Settings]:
             "frontend_dist": tmp_path / "no-dist",
             "data_dir": tmp_path / "data",
             "test_mode": True,
+            "detector": "none",
         }
         base.update(overrides)
         return Settings(_env_file=None, **base)  # type: ignore[call-arg]
