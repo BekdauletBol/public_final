@@ -10,7 +10,7 @@ runs offline on public datasets for reproducible evaluation.
 Status: **M4** (HTTPS, database, admin login, PIN pairing, phone capture,
 YOLOv8n person detection with all six membership rules, zone editor, events
 with hysteresis, overlays, CSV export, metrics, load test). The evaluation
-harness arrives in M5; see `publicsafe-cli-spec.md`.
+harness arrives in M5; see [docs/IMPLEMENTATION_SPEC.md](docs/IMPLEMENTATION_SPEC.md).
 
 ## Quick start (macOS, Apple Silicon)
 
