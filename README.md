@@ -199,8 +199,8 @@ Known limitations:
 
 ## Author
 
-**[MY FULL NAME]**, Astana IT University.
-Supervisor: **[SUPERVISOR FULL NAME]**.
+**Bolatov Bekdaulet Almasovich (Болатов Бекдаулет Алмасович)**, Astana IT University.
+Supervisor: **Nurgaliyeva Symbat Altybayevna (Нургалиева Сымбат Алтыбаевна)**.
 
 ## License
 
