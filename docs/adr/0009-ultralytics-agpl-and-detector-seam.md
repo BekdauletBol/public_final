@@ -32,3 +32,10 @@ but the obligation matters the moment it is deployed for others.
   the P1 tracking option (one model per camera) a local change.
 - The repository's own licence choice is left to the owner; this ADR records
   the constraint, not a decision to adopt AGPL.
+
+## Update (2026-10-18)
+
+The owner adopted AGPL-3.0 for the repository itself: the full licence text is
+in [`LICENSE`](../../LICENSE) and both packages declare `AGPL-3.0-only`. The
+Detector seam above remains the escape hatch should a permissive detector ever
+be needed.

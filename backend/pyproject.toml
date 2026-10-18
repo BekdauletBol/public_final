@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=75", "wheel"]
+requires = ["setuptools>=77", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -7,6 +7,7 @@ name = "publicsafe"
 version = "0.1.0"
 description = "public.safe - smartphones as camera nodes for pedestrian danger-zone monitoring"
 requires-python = ">=3.12,<3.13"
+license = "AGPL-3.0-only"
 dependencies = [
   "fastapi==0.143.0",
   "uvicorn[standard]==0.54.0",
