@@ -1,0 +1,80 @@
+@startuml 04-data-model
+title public.safe — Data model (ER, Alembic migration 0001)
+hide circle
+skinparam linetype ortho
+
+entity "sessions" as S {
+  * id : uuid
+  --
+  name
+  location_note
+  created_at
+  archived_at
+}
+entity "cameras" as C {
+  * id : uuid
+  --
+  session_id (FK)
+  name, status
+  target_fps, jpeg_quality, max_long_edge
+  confidence, privacy_mode
+  last_seen_at, frame_w, frame_h
+}
+entity "zones" as Z {
+  * id : uuid
+  --
+  camera_id (FK)
+  name, points_norm (JSON)
+  frame_w, frame_h
+  active_rule, enter_frames, exit_frames
+  enabled, needs_review
+}
+entity "device_credentials" as D {
+  * id : uuid
+  --
+  camera_id (FK)
+  token_hash (sha256)
+  created_at, revoked_at
+}
+entity "pairing_codes" as P {
+  * id : uuid
+  --
+  session_id (FK)
+  pin_hash, salt
+  expires_at, redeemed_at, attempts
+}
+entity "events" as E {
+  * id : uuid
+  --
+  session_id, camera_id, zone_id (FK)
+  type (zone_entered | zone_cleared | occupancy_changed)
+  t_server, frame_seq
+  count_before, count_after
+  active_rule, rule_counts (JSON)
+}
+entity "metric_samples" as M {
+  * id
+  --
+  camera_id (FK)
+  t, input_fps, processed_fps
+  drop_ratio, rtt_ms, inference_ms
+}
+entity "admin_sessions" as A {
+  * id_hash
+  --
+  created_at, last_seen_at
+}
+entity "security_log" as L {
+  * id
+  --
+  t, kind, ip, reason
+}
+
+S ||--o{ C
+C ||--o{ Z
+C ||--o{ D
+S ||--o{ P
+C ||--o{ E
+Z ||--o{ E
+C ||--o{ M
+@enduml

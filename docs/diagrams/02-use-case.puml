@@ -1,0 +1,63 @@
+@startuml 02-use-case
+left to right direction
+skinparam packageStyle rectangle
+skinparam actorStyle awesome
+skinparam usecase {
+  BackgroundColor #F4F8FD
+  BorderColor #3B6EA5
+}
+title public.safe — Use case diagram
+
+actor "Safety operator\n(admin)" as Op
+actor "Camera-node owner\n(phone)" as Ph
+actor "Researcher" as Re
+
+rectangle "public.safe" {
+  package "Session and camera management" {
+    usecase "UC1 Log in / log out" as UC1
+    usecase "UC2 Create / archive\nmonitoring session" as UC2
+    usecase "UC3 Mint pairing PIN / QR" as UC3
+    usecase "UC12 Revoke or replace a phone" as UC12
+    usecase "UC13 Review security log" as UC13
+  }
+  package "Camera node" {
+    usecase "UC4 Pair phone with PIN" as UC4
+    usecase "UC5 Stream rear camera\n(auto-reconnect, pause on hide)" as UC5
+  }
+  package "Zones and live monitoring" {
+    usecase "UC6 Draw / edit danger-zone\npolygon on live frame" as UC6
+    usecase "UC7 Configure zone rule\nand hysteresis" as UC7
+    usecase "UC8 Watch live view with overlays\n(boxes, foot anchors, zone state)" as UC8
+    usecase "UC9 Receive zone_entered /\nzone_cleared events" as UC9
+    usecase "UC10 Filter and export events (CSV)" as UC10
+    usecase "UC11 Monitor health and metrics" as UC11
+  }
+  package "Evaluation (M5)" {
+    usecase "UC14 Run offline evaluation\non public datasets" as UC14
+    usecase "UC15 Run load test\n(latest vs FIFO scheduler)" as UC15
+  }
+}
+
+Op --> UC1
+Op --> UC2
+Op --> UC3
+Op --> UC12
+Op --> UC13
+Op --> UC6
+Op --> UC7
+Op --> UC8
+Op --> UC9
+Op --> UC10
+Op --> UC11
+Ph --> UC4
+Ph --> UC5
+Re --> UC14
+Re --> UC15
+Re --> UC10
+
+UC4 .> UC3 : <<include>>
+UC5 .> UC4 : <<include>>
+UC6 .> UC8 : <<extend>>
+UC9 .> UC5 : <<include>>
+UC2 .> UC1 : <<include>>
+@enduml

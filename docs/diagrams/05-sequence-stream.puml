@@ -1,0 +1,30 @@
+@startuml 05-sequence-stream
+title public.safe — Pairing, streaming and event flow (sequence)
+actor Operator
+participant "Dashboard\n(browser)" as Dash
+participant "FastAPI\nAPI / WS" as API
+participant "Mailbox +\nScheduler" as MB
+participant "Inference\nworker" as W
+database "DB" as DB
+participant "Phone\n(browser)" as Phone
+
+Operator -> Dash : create session, "Add phone"
+Dash -> API : POST /sessions/{id}/pairing-codes
+API --> Dash : PIN, expires_at, URL + QR
+Phone -> API : POST /api/pair/redeem {pin}
+API -> DB : create camera, device_credential(token_hash)
+API --> Phone : camera_id, device token (once)
+Phone -> API : WSS /ws/camera, first message {auth, token}
+API --> Phone : hello {settings: fps, quality, max_edge}
+loop every frame at target fps
+  Phone -> API : frame_meta JSON + binary JPEG
+  API -> MB : put(camera, frame)  (replaces unread frame)
+  MB -> W : next() — round-robin over cameras
+  W -> W : decode → YOLOv8n → 6 rules → state machine
+  W -> DB : events, metric samples
+  W -> Dash : frame_result JSON (+ JPEG preview unless privacy mode)
+  API --> Phone : ack every 10 frames
+end
+W -> Dash : event {zone_entered}
+Dash -> Dash : overlay turns red, event row appears
+@enduml

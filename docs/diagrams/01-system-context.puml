@@ -1,0 +1,25 @@
+@startuml 01-system-context
+!include <C4/C4_Context>
+title public.safe — System context diagram (prob-period-1)
+
+Person(operator, "Safety operator", "Safety staff / researcher. Creates sessions, pairs phones, draws danger zones, watches events, exports CSV.")
+Person(camera_holder, "Camera-node owner", "Mounts a smartphone facing the danger zone (loading bay, kerb, truck blind-spot area) and opens the phone page in a browser.")
+Person_Ext(pedestrian, "Pedestrian", "Enters or leaves the monitored zone; is detected but never identified.")
+
+System(publicsafe, "public.safe", "Real-time pedestrian danger-zone monitoring: phones stream frames over WSS, a laptop runs YOLOv8n + foot-point zone rules, dashboard shows events live.")
+
+System_Ext(weights, "Ultralytics release assets", "yolov8n.pt weights, downloaded once; SHA-256 recorded.")
+System_Ext(mkcert, "Local certificate authority (mkcert)", "Issues the HTTPS/WSS certificate trusted by the laptop and phones.")
+System_Ext(datasets, "Public datasets (MOT17, WILDTRACK)", "Offline evaluation of the zone-membership rules (M5).")
+System_Ext(future_alert, "Driver warning device (future)", "LED / overhead light triggered by zone_entered events; out of scope for prob-period-1.")
+
+Rel(camera_holder, publicsafe, "Pairs phone with PIN / QR, streams rear camera", "HTTPS + WSS")
+Rel(operator, publicsafe, "Logs in, manages sessions, zones, reviews events", "HTTPS + WSS")
+Rel(pedestrian, publicsafe, "Is observed by the camera node", "video frames")
+Rel(publicsafe, weights, "Downloads model weights once", "HTTPS")
+Rel(publicsafe, mkcert, "Uses locally issued certificate")
+Rel(publicsafe, datasets, "Replays sequences offline", "publicsafe eval")
+Rel_R(publicsafe, future_alert, "Would push zone_entered alerts", "planned")
+
+SHOW_LEGEND()
+@enduml

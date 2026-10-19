@@ -1,0 +1,633 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>SE-2405_Bolatov_ProbPeriod1</title>
+<style>
+  @page { size: A4; margin: 22mm 18mm 22mm 18mm; }
+  @page wide { size: A4 landscape; }
+  .wide { page: wide; }
+  html { font-family: Inter, "DejaVu Sans", sans-serif; font-size: 10.5pt; line-height: 1.42; color: #1a1a1a; }
+  body { margin: 0; }
+  h1 { font-size: 20pt; margin: 0 0 6pt; page-break-after: avoid; color: #15365a; }
+  h2 { font-size: 15pt; margin: 22pt 0 8pt; padding-bottom: 4pt; border-bottom: 1.5px solid #2E5A88; color: #15365a; page-break-after: avoid; }
+  h3 { font-size: 11.5pt; margin: 14pt 0 5pt; color: #2E5A88; page-break-after: avoid; }
+  p { margin: 0 0 7pt; text-align: justify; }
+  ul, ol { margin: 0 0 7pt 0; padding-left: 18pt; }
+  li { margin-bottom: 2pt; }
+  table { border-collapse: collapse; width: 100%; margin: 6pt 0 10pt; font-size: 9pt; page-break-inside: auto; }
+  th, td { border: 1px solid #c8d2dd; padding: 3.5pt 5pt; vertical-align: top; text-align: left; }
+  th { background: #e9f0f7; font-weight: 600; }
+  tr { page-break-inside: avoid; }
+  thead { display: table-header-group; }
+  code, .mono { font-family: "DejaVu Sans Mono", monospace; font-size: 8.6pt; background: #f3f5f8; padding: 0 2pt; border-radius: 2px; }
+  pre { font-family: "DejaVu Sans Mono", monospace; font-size: 8.4pt; background: #f3f5f8; padding: 6pt 8pt; border-radius: 3px; white-space: pre-wrap; margin: 4pt 0 8pt; }
+  figure { margin: 8pt 0 12pt; text-align: center; page-break-inside: avoid; }
+  figure img { max-width: 100%; }
+  figcaption { font-size: 9pt; color: #444; margin-top: 4pt; text-align: center; }
+  .cover { height: 240mm; display: flex; flex-direction: column; justify-content: space-between; page-break-after: always; }
+  .cover .uni { text-align: center; font-size: 11pt; color: #444; }
+  .cover .title { text-align: center; }
+  .cover .title .kind { font-size: 11pt; letter-spacing: .12em; text-transform: uppercase; color: #2E5A88; margin-bottom: 14pt; }
+  .cover .title h1 { font-size: 22pt; line-height: 1.25; }
+  .cover .title .sub { font-size: 12pt; color: #333; margin-top: 10pt; }
+  .cover .meta { font-size: 11pt; }
+  .cover .meta td { border: none; padding: 2pt 8pt 2pt 0; font-size: 11pt; }
+  .toc { page-break-after: always; }
+  .toc ol { list-style: none; padding: 0; }
+  .toc li { display: flex; justify-content: space-between; border-bottom: 1px dotted #bbb; padding: 3pt 0; }
+  .toc li.sub { padding-left: 16pt; font-size: 9.5pt; }
+  .toc li span:last-child { padding-left: 8pt; }
+  .pb { page-break-before: always; }
+  .note { background: #fff7e0; border-left: 3px solid #e3b341; padding: 5pt 8pt; margin: 6pt 0 10pt; font-size: 9.5pt; }
+  .box { background: #f3f7fb; border: 1px solid #c8d2dd; padding: 6pt 9pt; margin: 6pt 0 10pt; font-size: 9.8pt; }
+  .small { font-size: 9pt; color: #444; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8pt; }
+  .grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8pt; }
+  .grid2 figure, .grid3 figure { margin: 4pt 0; }
+  .grid2 figure img, .grid3 figure img { border: 1px solid #ddd; }
+  a { color: #1b4f82; text-decoration: none; word-break: break-all; }
+  .tag { display: inline-block; font-size: 8pt; padding: 0 4pt; border-radius: 3px; background: #e2ecf6; color: #15365a; font-weight: 600; }
+  .confirm { background: #ffe9a8; font-weight: 600; font-size: 8.5pt; padding: 0 3pt; border-radius: 2px; }
+</style>
+</head>
+<body>
+
+<!-- ================= COVER ================= -->
+<div class="cover">
+  <div class="uni">Astana IT University<br>School of Computer Engineering · Software Engineering</div>
+  <div class="title">
+    <div class="kind">Diploma project · Probation period 1 report</div>
+    <h1>Development of a Real-time Pedestrian Risk Assessment System for Truck Blind Spots Based on Object Detection Methods</h1>
+    <div class="sub">Working name of the system: <b>public.safe</b> — smartphones as camera nodes, YOLOv8n person detection, foot-point zone-membership rules, live web dashboard</div>
+  </div>
+  <table class="meta">
+    <tr><td>Student</td><td><b>Bolatov Bekdaulet Almasovich</b>, group SE-2405 (individual project)</td></tr>
+    <tr><td>Supervisor</td><td>Nurgaliyeva Symbat Altybayevna, PhD, Assistant Professor</td></tr>
+    <tr><td>Repository</td><td><a href="https://github.com/BekdauletBol/public_final">github.com/BekdauletBol/public_final</a></td></tr>
+    <tr><td>Submitted version</td><td>tag <code>prob-period-1</code> — <a href="https://github.com/BekdauletBol/public_final/tree/prob-period-1">github.com/BekdauletBol/public_final/tree/prob-period-1</a></td></tr>
+    <tr><td>Task board</td><td><a href="https://github.com/users/BekdauletBol/projects/1">github.com/users/BekdauletBol/projects/1</a></td></tr>
+    <tr><td>Date</td><td>Astana, October 2026</td></tr>
+  </table>
+</div>
+
+<!-- ================= TOC ================= -->
+<div class="toc">
+  <h1>Table of contents</h1>
+  <ol id="toc">
+    <!-- generated -->
+  </ol>
+  <p class="small">All materials in this report correspond to the repository version tagged <code>prob-period-1</code>. Editable diagram sources are in <code>docs/diagrams/*.puml</code> (PlantUML) with PNG/SVG exports in <code>docs/diagrams/export/</code>; this report is stored as <code>docs/report/SE-2405_Bolatov_ProbPeriod1.pdf</code>.</p>
+</div>
+
+<!-- ================= 1 ================= -->
+<h2 id="s1">1. Project proposal</h2>
+
+<table>
+  <tr><th style="width:26%">Project title</th><td>Development of a Real-time Pedestrian Risk Assessment System for Truck Blind Spots Based on Object Detection Methods (system name: <b>public.safe</b>)</td></tr>
+  <tr><th>Team</th><td>Bolatov Bekdaulet Almasovich, SE-2405 — individual project; sole developer (system design, backend, computer-vision pipeline, frontend, testing, documentation). GitHub: <a href="https://github.com/BekdauletBol">BekdauletBol</a></td></tr>
+  <tr><th>Supervisor</th><td>Nurgaliyeva Symbat Altybayevna, PhD, Assistant Professor, School of Computer Engineering</td></tr>
+  <tr><th>Type</th><td>Software system with an experimental (research) component; continuation of the student research work “Edge-distributed pedestrian monitoring system using YOLOv8 and geometric spatial analysis for real-time urban danger zone detection” (AITU, 2026)</td></tr>
+</table>
+
+<h3>1.1 Problem statement</h3>
+<p>Pedestrians account for about 23 % of road deaths worldwide [1], and in Kazakhstan collisions at crossings, loading areas and along the kerb remain frequent because drivers notice pedestrians too late [2]. Large vehicles make the problem worse: the high cabin of a truck or bus creates blind spots at the nearside and directly in front of the vehicle, so a person standing in a loading bay, next to a parked lorry or on the kerb beside a turning truck is often invisible to the driver until the last moment. In the survey conducted for this project (Section 2) 61 % of respondents named high truck/bus cabins as one of the main reasons why drivers fail to notice pedestrians, and 92 % had experienced a near-miss at a crossing.</p>
+<p>Existing counter-measures are either passive (lighting, LED markings, signage — they improve visibility but do not analyse the scene) or expensive and slow to deploy (fixed CCTV with analytics servers, estimated at $15 000–50 000 per site in Kazakhstan [3]; retrofit on-vehicle sensor kits that protect one vehicle only). There is no cheap, quickly deployable way to monitor a specific dangerous area — a loading bay, a yard gate, a construction-site exit, the kerb at a crossing — and to raise an alert the moment a person steps into it.</p>
+
+<h3>1.2 Target users</h3>
+<ul>
+  <li><b>Safety staff</b> of logistics yards, warehouses, construction sites and bus depots who need to know when a person enters an area where trucks manoeuvre and cannot see them.</li>
+  <li><b>Municipal / road-safety researchers</b> who want to measure how often pedestrians enter a risk zone at a given crossing before deciding on infrastructure changes.</li>
+  <li><b>Developers and students</b> who need a reproducible, open pipeline (same code live and offline) for evaluating zone-membership rules on public datasets.</li>
+</ul>
+
+<h3>1.3 Aim</h3>
+<p>To develop and evaluate a low-cost real-time system that turns ordinary smartphones into camera nodes, detects pedestrians with an object-detection network, decides whether each person is inside a configured danger zone using a foot-point geometric rule, and delivers entry/exit events to a web dashboard (and, in future, to a driver-facing warning device) with sub-second latency.</p>
+
+<h3>1.4 Objectives</h3>
+<ol>
+  <li>Analyse existing pedestrian-safety and video-analytics solutions and formulate requirements grounded in user evidence (survey, discussions with drivers).</li>
+  <li>Design a three-tier architecture: phone browser (capture) → laptop backend (FastAPI, YOLOv8n, geometric rules) → web dashboard; record every key decision as an ADR.</li>
+  <li>Implement secure phone pairing (PIN/QR, opaque device tokens, HTTPS/WSS), a per-camera latest-frame scheduler, person detection, six zone-membership rules computed every frame, a hysteresis state machine producing <code>zone_entered</code>/<code>zone_cleared</code> events, and a dashboard with a polygon zone editor, live overlays, events and CSV export.</li>
+  <li>Build an evaluation harness that runs the same detector and rules offline on public datasets (MOT17, WILDTRACK) and on own recordings, with pre-registered metrics and success criteria.</li>
+  <li>Measure precision/recall/F1 of foot-point rules against the bounding-box-overlap baseline, and tail latency of the latest-frame scheduler against a FIFO queue with several phones.</li>
+  <li>Document, test (unit, integration, security, CV, end-to-end, load) and demonstrate the system; prepare the approbation report.</li>
+</ol>
+
+<h3>1.5 Expected outcomes</h3>
+<ul>
+  <li>A working local system (one command to set up, one to run) with 218+ automated tests, documented in the repository.</li>
+  <li>Quantitative answer to the research question: whether foot-anchored zone membership reduces false alarms compared with bounding-box overlap, and at what cost in recall (target: precision ≥ baseline + 0.10 with recall loss ≤ 0.05).</li>
+  <li>Measured latency profile: server-side p50 ≤ 150 ms and p99 ≤ 400 ms with three phones at 10 fps on a laptop; fairness ratio ≤ 1.3 between cameras.</li>
+  <li>Reusable architecture decisions (9 ADRs), diagrams and an evaluation protocol that other teams can repeat.</li>
+</ul>
+
+<h3>1.6 Scope</h3>
+<table>
+  <tr><th style="width:50%">In scope (diploma)</th><th>Out of scope / future work</th></tr>
+  <tr><td>
+    <ul>
+      <li>Browser-based phone capture (iOS Safari, Android Chrome), PIN/QR pairing, auto-reconnect</li>
+      <li>Single-laptop backend on a local network; SQLite by default, PostgreSQL optional</li>
+      <li>YOLOv8n person detection (MPS / CUDA / CPU), six membership rules, hysteresis events</li>
+      <li>Dashboard: sessions, cameras, zone editor, live overlays, events, metrics, security log</li>
+      <li>Offline evaluation CLI, load test, documentation, ADRs</li>
+      <li>Pre-registered experiments E1–E7 (Section 9)</li>
+    </ul>
+  </td><td>
+    <ul>
+      <li>Native mobile apps; WebRTC; cloud deployment; microservices; message brokers</li>
+      <li>Person tracking across frames (planned extension behind the detector seam)</li>
+      <li>Ground-plane calibration / homography; weather-adaptive thresholds</li>
+      <li>Face recognition or any identity inference (explicitly excluded for privacy)</li>
+      <li>Physical driver-warning hardware (LED, ESP32 nodes) — concept only</li>
+      <li>Multi-tenant role model (single admin is sufficient)</li>
+    </ul>
+  </td></tr>
+</table>
+
+<!-- ================= 2 ================= -->
+<h2 id="s2" class="pb">2. Evidence of relevance</h2>
+<p>Two sources of user evidence inform the requirements: a structured online survey of pedestrians and drivers (n = 36) and informal discussions with drivers. Statistical context comes from WHO road-safety reports [1, 2]. Findings that are directly measured are separated from assumptions in Section 2.4.</p>
+
+<h3>2.1 Survey of pedestrians and drivers (n = 36)</h3>
+<p>A Google Forms questionnaire with eight closed questions and one open question was distributed digitally among residents of Astana (students, colleagues, acquaintances; convenience sample). It covered (1) pedestrian experience at unsignalised crossings, (2) driver experience and (3) attitude towards automatic warning systems. 36 people answered the pedestrian section; the driver-specific questions were answered by 10 respondents. Raw results are available in the form’s response summary (screenshots in Appendix A).</p>
+<figure><img src="img/survey-pedestrian.png" style="width:100%"><figcaption>Figure 2.1. Pedestrian section of the survey (n = 36).</figcaption></figure>
+<figure><img src="img/survey-drivers.png" style="width:100%"><figcaption>Figure 2.2. Driver section and attitude towards automatic warning (n = 33 / 10 / 35).</figcaption></figure>
+<p><b>Key findings.</b> 86 % of respondents cross unsignalised crossings daily or several times a week; 72 % feel anxious or stressed there; 91.7 % have experienced a driver noticing them late or failing to yield. The most cited visibility obstacles are parked cars blocking the view (69.4 %), <b>high truck/bus cabins — blind spots (61.1 %)</b> and driver distraction (61.1 %). 88.6 % strongly support automatic sensors that trigger a warning when a person appears; nobody opposed. Open answers repeat three themes: visible driver alerts, better lighting, and enforcement. One driver wrote: <i>“safety at crossings can be improved by using smart camera systems that detect pedestrians in real time and automatically alert drivers”</i> — which is exactly the function public.safe implements.</p>
+
+<h3>2.2 Informal discussions with drivers</h3>
+<div class="note">Draft reconstructed from memory — the discussions were not recorded. Lines marked <span class="confirm">[confirm]</span> must be checked by the author and corrected or removed before submission.</div>
+<p>In addition to the survey, the author talked informally with <span class="confirm">[confirm: N]</span> drivers <span class="confirm">[confirm: when, e.g. September–October 2026]</span> — <span class="confirm">[confirm: passenger-car drivers / a truck or bus driver]</span>. Notes were not taken at the time; the points below are the themes the author remembers and are therefore treated as supporting, not primary, evidence.</p>
+<ul>
+  <li><span class="confirm">[confirm]</span> Drivers of larger vehicles said that a person standing close to the nearside of the cab or right in front of the bumper “just disappears” — they rely on mirrors and on the pedestrian keeping distance.</li>
+  <li><span class="confirm">[confirm]</span> At twilight and in winter (snow banks, parked cars) pedestrians at crossings are noticed late; a visible external signal (light) would be more useful than another in-cab beep.</li>
+  <li><span class="confirm">[confirm]</span> Drivers do not want to be filmed or identified; a system that only signals “a person is in the zone” without recording video was considered acceptable.</li>
+  <li><span class="confirm">[confirm]</span> In yards and loading areas the dangerous moments are reversing and slow turns, i.e. low speed — which matches the requirement for a fixed zone rather than vehicle tracking.</li>
+</ul>
+
+<h3>2.3 Statistical context</h3>
+<ul>
+  <li>WHO Global Status Report on Road Safety 2023: pedestrians are 23 % of road-traffic deaths worldwide [1].</li>
+  <li>Kazakhstan country profile (WHO, 2023): road-traffic deaths remain high; vulnerable road users are a significant share [2]. <span class="confirm">[optional: add national statistics from Qazstat / MVD for 2021–2025 if available]</span></li>
+  <li>Fixed CCTV with analytics costs an estimated $15 000–50 000 per intersection in Kazakhstan and cannot be deployed temporarily [3, 6].</li>
+</ul>
+
+<h3>2.4 Verified findings versus assumptions</h3>
+<table>
+  <tr><th style="width:46%">Statement</th><th style="width:16%">Status</th><th>Basis</th></tr>
+  <tr><td>Pedestrians frequently experience near-misses at unsignalised crossings</td><td><span class="tag">Verified</span></td><td>Survey Q3, 91.7 % (n = 36)</td></tr>
+  <tr><td>Truck/bus blind spots are perceived as a major cause of late detection</td><td><span class="tag">Verified</span></td><td>Survey Q4, 61.1 %; driver discussions</td></tr>
+  <tr><td>Users accept automatic camera-based warning at crossings</td><td><span class="tag">Verified</span></td><td>Survey Q8, 88.6 % strongly support, 0 % oppose</td></tr>
+  <tr><td>A phone camera + laptop can detect people in a zone with usable precision</td><td><span class="tag">Verified (lab)</span></td><td>Research-work prototype: precision 0.94, F1 0.92 on 847 lab events; to be re-established on public data (E1)</td></tr>
+  <tr><td>Foot-point rules beat bounding-box overlap on public datasets</td><td><span class="tag">Assumption</span></td><td>Hypothesis H1; evaluated in M5 (E1), success criterion in Section 9</td></tr>
+  <tr><td>Operators prefer no video storage (privacy mode)</td><td><span class="tag">Assumption</span></td><td>Driver discussions; Law of RK No. 94-V on personal data</td></tr>
+  <tr><td>The system works outdoors in rain / snow / night</td><td><span class="tag">Assumption</span></td><td>Night tested in the lab prototype; weather conditions are experiment E7</td></tr>
+  <tr><td>A real client (yard / depot) will deploy the system</td><td><span class="tag">Not yet</span></td><td>No agreement with a client; planned for the next period</td></tr>
+</table>
+
+<!-- ================= 3 ================= -->
+<h2 id="s3" class="pb">3. Literature review</h2>
+<p>The review covers four groups of sources: (1) road-safety statistics and policy, (2) passive crossing infrastructure (lighting, LED markings, warning beacons), (3) real-time person detection on edge hardware, (4) geometric and tracking methods used to decide where a detected person is. The full list has 15 sources, of which 11 are peer-reviewed publications; the core detection and edge-computing sources are from 2021–2026, while foundational works (point-in-polygon algorithm, crowd analysis survey) are retained.</p>
+
+<h3>3.1 Passive infrastructure improves visibility but does not analyse the scene</h3>
+<p>Before-after studies of crosswalk warning systems (“SeeMe”, Norway) show that pedestrian-activated flashing beacons increase driver yielding [3]; LED-lit crosswalks and integrated lighting-warning systems improve night-time yielding at unsignalised crossings [4, 5]. All three studies measure driver behaviour, not detection: the systems either react to a push button / simple presence sensor or light the crossing permanently. They do not know whether a person is actually in the dangerous area, cannot distinguish a person from a parked bicycle, and cannot be moved to a loading bay or yard. This is the gap public.safe addresses with class-aware detection and a configurable polygon.</p>
+
+<h3>3.2 Real-time person detection at the edge is feasible on commodity hardware</h3>
+<p>YOLO-family detectors dominate real-time surveillance work. Bharadwaj et al. apply YOLO to edge surveillance for human detection [6]; Maltezos et al. report 70 ms per frame for YOLOv5 person detection on embedded GPUs in a distributed edge platform with IoT alert sharing, confirming the latency advantage of edge inference over centralised pipelines [11]. FPGA deployments [12] and EdgeML traffic management systems [14] reach sub-200 ms latency on commodity hardware. Night-time variants (YOLOv8-night) show that low-light performance is a known weakness that can be mitigated by training data and architecture changes [13]. The US DOT review of cost-effective computer-vision solutions for transportation [15] explicitly recommends consumer cameras as a cheap alternative to stationary sensor networks. Ultralytics YOLOv8 [8] is the detector used here (nano variant: 37.3 mAP on COCO at 3.2 M parameters).</p>
+
+<h3>3.3 Deciding where a person is: bounding-box overlap versus ground-contact points</h3>
+<p>Most zone-intrusion analytics decide membership by intersecting the detection box with the zone (IoU or any-overlap) [6, 7]. The failure mode is systematic: a person standing next to the zone has the upper part of the box over it while the feet are outside, which produces a false alarm. Crowd-analysis work uses ground-plane projection of the box bottom instead [9]; the classical ray-casting point-in-polygon algorithm [10] gives an O(n) exact test for that point. Multi-object trackers such as ByteTrack [7] add temporal identity but still rely on the box geometry for position. The research work that precedes this project found that a three-point foot-contact rule raised precision from 0.71 to 0.94 in laboratory scenarios; however, the published ablation is not consistent with an “any of three points” rule (a superset rule cannot have fewer positives than its subset), which is why experiment E2 re-establishes the result with all six rules computed on the same frames (ADR 0008).</p>
+
+<h3>3.4 What the project takes from the literature</h3>
+<ul>
+  <li>Use a nano-scale YOLO detector on the laptop GPU/CPU; do not attempt on-phone inference (browser WebGPU inference was excluded as too slow and battery-hungry for continuous use).</li>
+  <li>Treat bounding-box overlap as the baseline and foot-anchored rules as the proposed method; report precision/recall with confidence intervals and a paired test (McNemar), as in [11, 14].</li>
+  <li>Bound tail latency explicitly (per-camera latest-frame mailbox) rather than relying on average throughput.</li>
+  <li>Keep identity out of the pipeline (no faces, no tracking IDs persisted) — privacy requirements in [15] and RK law.</li>
+</ul>
+
+<h3>3.5 Structured analysis of sources</h3>
+<table>
+  <thead><tr><th>#</th><th style="width:24%">Source</th><th>Type / year</th><th>Approach</th><th>Key finding</th><th>Limitation for this project</th><th>Used in</th></tr></thead>
+  <tbody>
+  <tr><td>1</td><td>WHO, Global Status Report on Road Safety 2023</td><td>Report, 2023</td><td>Global statistics</td><td>Pedestrians = 23 % of road deaths</td><td>No site-level data</td><td>§1.1, §2.3</td></tr>
+  <tr><td>2</td><td>WHO, Kazakhstan country profile 2023</td><td>Report, 2023</td><td>National statistics</td><td>High road-death rate in KZ</td><td>No breakdown by location type</td><td>§2.3</td></tr>
+  <tr><td>3</td><td>Hoye &amp; Laureshyn, “SeeMe at the crosswalk”, Transp. Res. F 60, 2019</td><td>Journal, 2019</td><td>Before-after field study of a pedestrian-activated warning system</td><td>Warning beacons increase yielding</td><td>No detection; fixed install</td><td>§3.1, §4</td></tr>
+  <tr><td>4</td><td>Patella et al., “LED lighting crosswalk”, Safety 6(2), 2020</td><td>Journal, 2020</td><td>Experimental LED crosswalk</td><td>Improves night visibility</td><td>Passive only</td><td>§3.1</td></tr>
+  <tr><td>5</td><td>Costa et al., “Integrated lighting-warning system”, Transp. Res. F 68, 2020</td><td>Journal, 2020</td><td>Night-time yielding study</td><td>Lighting + warning improves yielding</td><td>No scene analysis</td><td>§3.1</td></tr>
+  <tr><td>6</td><td>Bharadwaj et al., “YOLO-based real-time human detection at the edge”, IEEE INDICON 2021</td><td>Conference, 2021</td><td>YOLO on edge devices</td><td>Real-time human detection feasible</td><td>Box-overlap zone logic</td><td>§3.2, §3.3</td></tr>
+  <tr><td>7</td><td>Zhang et al., “ByteTrack”, ECCV 2022</td><td>Conference, 2022</td><td>Multi-object tracking</td><td>Associating every box improves tracking</td><td>Tracking is P1 (E4)</td><td>§3.3, §9</td></tr>
+  <tr><td>8</td><td>Jocher et al., Ultralytics YOLOv8, 2023</td><td>Software, 2023</td><td>Detector family</td><td>YOLOv8n 37.3 mAP, 3.2 M params</td><td>AGPL-3.0 licence (ADR 0009)</td><td>§5.1</td></tr>
+  <tr><td>9</td><td>Zhan et al., “Crowd analysis: a survey”, MVA 19, 2008</td><td>Journal, 2008 (foundational)</td><td>Survey of crowd analytics</td><td>Ground-plane projection of box bottom</td><td>Pre-deep-learning</td><td>§3.3</td></tr>
+  <tr><td>10</td><td>Shimrat, “Algorithm 112: position of point relative to polygon”, CACM 1962</td><td>Journal, 1962 (foundational)</td><td>Ray-casting PIP</td><td>Exact O(n) point-in-polygon test</td><td>—</td><td>§3.3, geometry.py</td></tr>
+  <tr><td>11</td><td>Maltezos et al., “Video analytics for person detection with edge computing”, Computation 10(3), 2022</td><td>Journal, 2022</td><td>YOLOv5 on embedded GPU + IoT alerts</td><td>70 ms/frame; edge beats central</td><td>Dedicated hardware</td><td>§3.2, §4</td></tr>
+  <tr><td>12</td><td>Al Amin et al., “FPGA-based real-time object detection using YOLO”, IEEE 2024</td><td>Conference, 2024</td><td>FPGA YOLO</td><td>Real-time at the edge</td><td>Specialised hardware</td><td>§3.2</td></tr>
+  <tr><td>13</td><td>Wang et al., “YOLOv8-night”, Electronics Letters 2024</td><td>Journal, 2024</td><td>Low-light YOLOv8 variant</td><td>Night performance can be improved</td><td>Different domain (wildlife)</td><td>§3.2, risks</td></tr>
+  <tr><td>14</td><td>Silva &amp; Anpalagan, “EdgeML-driven real-time vehicle tracking…”, Applied Sciences 16(5), 2026</td><td>Journal, 2026</td><td>EdgeML smart-city traffic</td><td>Sub-200 ms on commodity hardware</td><td>Vehicles, not pedestrians</td><td>§3.2, §9</td></tr>
+  <tr><td>15</td><td>US DOT, “Cost-effective computer vision for smart transportation”, 2023</td><td>Report, 2023</td><td>Review</td><td>Consumer cameras are a cheap alternative</td><td>US context</td><td>§1.5, §3.4</td></tr>
+  </tbody>
+</table>
+<p class="small">The reference list (Section 12) follows IEEE style. Additional sources on truck blind-spot detection and vulnerable-road-user systems will be added in the next period. <span class="confirm">[author: list to be extended]</span></p>
+
+<!-- ================= 4 ================= -->
+<div class="wide">
+<h2 id="s4" class="pb">4. Existing system comparison</h2>
+<p>Five systems that solve a neighbouring problem were compared with the proposed solution along eight criteria. Two groups exist: on-vehicle collision-warning kits (Mobileye Shield+, Brigade Sidescan Predict) and fixed-camera video analytics (Hikvision AcuSense, AXIS Object Analytics, the open-source Frigate NVR). The pedestrian-activated crosswalk warning system “SeeMe” [3] is included as the infrastructure reference. Claims are taken from vendor documentation and the cited studies; where a vendor publishes no figure the cell says so.</p>
+
+<table>
+  <thead><tr><th style="width:15%">Criterion</th><th>Mobileye Shield+ (on-vehicle)</th><th>Brigade Sidescan Predict (on-vehicle)</th><th>Hikvision AcuSense (camera / NVR)</th><th>AXIS Object Analytics (edge camera)</th><th>Frigate NVR (open source)</th><th>SeeMe crosswalk warning [3]</th><th style="background:#dbe8f5">public.safe (proposed)</th></tr></thead>
+  <tbody>
+  <tr><td>Sensing</td><td>Forward + side cameras on the vehicle, AI hazard analysis</td><td>6 ultrasonic sensors, 2.5 m range, nearside</td><td>Fixed IP camera, deep-learning human/vehicle filter</td><td>Fixed Axis camera with on-camera DLPU</td><td>Any RTSP IP camera + server (CPU / Coral / GPU)</td><td>Presence sensor / push button at the crossing</td><td style="background:#eef4fa">Any smartphone browser camera, no install</td></tr>
+  <tr><td>What is detected</td><td>Pedestrians, cyclists, vehicles ahead and in side blind spots</td><td>Objects in the blind spot (moving / static); no class</td><td>Humans, vehicles</td><td>Humans, vehicles, vehicle types</td><td>COCO classes (person, car, …)</td><td>Presence only</td><td style="background:#eef4fa">Persons (YOLOv8n class 0)</td></tr>
+  <tr><td>Zone / geometry logic</td><td>Trajectory and time-to-collision, vehicle-centred</td><td>Predicted collision from speed, direction, turning rate</td><td>Intrusion box, line crossing, region enter/exit — box-based, up to 4 regions</td><td>Object in area, line crossing, time in area, occupancy</td><td>Polygon zones; membership = bottom-centre of the box, with inertia frames</td><td>None</td><td style="background:#eef4fa">Polygon zones; 6 rules every frame (foot-point variants + bbox overlap), hysteresis state machine</td></tr>
+  <tr><td>Protects</td><td>One equipped vehicle</td><td>One equipped vehicle (rigid body, off above 30 km/h)</td><td>One fixed site per camera</td><td>One fixed site per camera</td><td>Fixed cameras at one site</td><td>One crossing</td><td style="background:#eef4fa">Any temporary or fixed site; several phones per laptop</td></tr>
+  <tr><td>Deployment unit and cost</td><td>Retrofit kit per vehicle, professional install; price on quote (vendor cites ROI &lt; 12 months)</td><td>Retrofit kit, ECU, display, cabling; price on quote</td><td>Camera + NVR, cabling, licences; site-level CCTV budget</td><td>Axis cameras only (MLPU/DLPU), analytics free with the camera</td><td>Free software; needs a server and a Coral/GPU for several cameras</td><td>Pole, beacons, sensor, power; civil works</td><td style="background:#eef4fa">Existing phones + one laptop; software free (AGPL-3.0)</td></tr>
+  <tr><td>Time to deploy</td><td>Days (installation per vehicle)</td><td>Days</td><td>Days–weeks (cabling, mounting)</td><td>Days</td><td>Hours (if cameras exist)</td><td>Weeks (construction)</td><td style="background:#eef4fa">Minutes: scan a QR, draw a polygon</td></tr>
+  <tr><td>Openness / reproducibility</td><td>Closed; no accuracy data published</td><td>Closed; no detection-rate data published</td><td>Closed; no accuracy data published</td><td>Closed; no accuracy figures published</td><td>Open source (MIT); zone rule documented</td><td>Peer-reviewed field study</td><td style="background:#eef4fa">Open source; same code runs offline on MOT17 with pre-registered metrics</td></tr>
+  <tr><td>Privacy</td><td>In-vehicle recording</td><td>No video</td><td>Video recorded on NVR</td><td>Video recorded / streamed</td><td>Records clips and snapshots</td><td>No video</td><td style="background:#eef4fa">No video stored; privacy mode sends JSON only</td></tr>
+  <tr><td>Published latency</td><td>Not published</td><td>Not published</td><td>Not published</td><td>Not published</td><td>Not published (depends on hardware)</td><td>n/a</td><td style="background:#eef4fa">Measured: 145 ms median, 380 ms p99 (lab, 3 phones); re-measured in E5/E6</td></tr>
+  </tbody>
+</table>
+
+<h3>4.1 Conclusions from the comparison</h3>
+<ul>
+  <li>On-vehicle kits protect only the vehicle they are installed in and cost a retrofit per vehicle; they cannot cover a yard where many third-party trucks operate. A <b>site-centred</b> system that watches the dangerous area itself is complementary and much cheaper.</li>
+  <li>Fixed-camera analytics decide membership by box intersection (Hikvision, Axis) or by the box bottom-centre (Frigate). None of them lets the operator choose and compare rules, and none publishes precision/recall — which is why the project treats the rule itself as the research object and measures it.</li>
+  <li>Only Frigate is open and reproducible, but it needs installed IP cameras and a server; it has no pairing flow for ad-hoc phone cameras and no offline evaluation on public datasets.</li>
+  <li>Crosswalk warning systems prove that a visible signal changes driver behaviour [3, 5]; public.safe produces the event that such a signal needs, from a camera instead of a push button.</li>
+</ul>
+
+</div>
+<!-- ================= 5 ================= -->
+<h2 id="s5" class="pb">5. Technology comparison</h2>
+<p>Seven key decisions were compared against 2–3 alternatives each. Decisions marked ADR are recorded in <code>docs/adr/</code> with context, alternatives and consequences.</p>
+
+<h3>5.1 Object detector</h3>
+<table>
+  <thead><tr><th>Model</th><th>Year / framework</th><th>COCO mAP50-95</th><th>Params / FLOPs</th><th>CPU ONNX latency (640 px)</th><th>Licence</th><th>Assessment for public.safe</th></tr></thead>
+  <tbody>
+  <tr><td>YOLOv3</td><td>2018, Darknet / PyTorch ports</td><td>≈ 33 (608 px)</td><td>62 M / 140 GFLOPs</td><td>Hundreds of ms on CPU</td><td>Various ports</td><td>Too heavy for a laptop serving several phones; outdated tooling</td></tr>
+  <tr><td>YOLOv7</td><td>2022, PyTorch</td><td>51.4 (full); tiny ≈ 37–38</td><td>37 M / 105 GFLOPs (full)</td><td>Full model not CPU-real-time; tiny comparable to v8n</td><td>GPL-3.0</td><td>Strong accuracy, but research-style repo, no maintained pip package, GPL</td></tr>
+  <tr><td><b>YOLOv8n</b> (chosen)</td><td>2023, Ultralytics PyTorch</td><td>37.3</td><td>3.2 M / 8.7 GFLOPs</td><td>80 ms (vendor); 49 ms FP32 on Apple MPS measured in M4</td><td>AGPL-3.0</td><td>Maintained package, MPS/CUDA/CPU auto-selection, known behaviour from the research work; licence handled by ADR 0009</td></tr>
+  <tr><td>YOLO11n</td><td>2024, Ultralytics</td><td>39.5</td><td>2.6 M / 6.5 GFLOPs</td><td>56 ms (vendor)</td><td>AGPL-3.0</td><td>Better and lighter; drop-in replacement behind the <code>Detector</code> seam — candidate for E7 re-run after the baseline is established with v8n</td></tr>
+  </tbody>
+</table>
+<p>YOLOv8n was kept because the research hypotheses were formulated and partly measured with it, so results stay comparable; the detector seam (ADR 0009) makes swapping to YOLO11n or to a permissively licensed ONNX model a one-file change. FP16 on MPS was measured and found <i>slower</i> (57.6 vs 49.2 ms per frame, identical boxes), so FP32 is the default (<code>docs/EVALUATION.md</code>).</p>
+
+<h3>5.2 Server platform</h3>
+<table>
+  <thead><tr><th>Option</th><th>Pros</th><th>Cons</th><th>Decision</th></tr></thead>
+  <tbody>
+  <tr><td><b>FastAPI + Uvicorn (Python 3.12)</b></td><td>Native async WebSockets, Pydantic validation, same language as the CV stack (PyTorch, OpenCV, Shapely), OpenAPI for free</td><td>Single process; GIL means CV runs in a worker thread</td><td><b>Chosen</b> — CV code and API in one process, no serialisation between them</td></tr>
+  <tr><td>Flask / Django</td><td>Mature, large ecosystem</td><td>WebSockets need extra layers (Channels, Socket.IO); sync by default</td><td>Rejected</td></tr>
+  <tr><td>Node.js (Express / NestJS)</td><td>Excellent WebSocket support</td><td>Inference would need a second Python process or ONNX runtime in JS; two codebases for core logic</td><td>Rejected</td></tr>
+  </tbody>
+</table>
+
+<h3>5.3 Phone → server transport</h3>
+<table>
+  <thead><tr><th>Option</th><th>Pros</th><th>Cons</th><th>Decision</th></tr></thead>
+  <tbody>
+  <tr><td><b>Binary WebSocket (WSS), JPEG per frame</b></td><td>Works in every mobile browser, simple backpressure (one unsent frame), frames are already images for the detector, first-message auth (ADR 0004)</td><td>No inter-frame compression → ~30–80 KB per frame at quality 65</td><td><b>Chosen</b></td></tr>
+  <tr><td>WebRTC video track</td><td>H.264 compression, adaptive bitrate</td><td>Needs a media server or aiortc, decoding on the server, signalling, TURN; much more complexity for a LAN</td><td>Deferred (behind the same <code>FrameSource</code> interface)</td></tr>
+  <tr><td>HTTP POST / MJPEG per frame</td><td>Trivial</td><td>Connection overhead per frame, no server→phone control channel</td><td>Rejected</td></tr>
+  </tbody>
+</table>
+
+<h3>5.4 Data storage (ADR 0003)</h3>
+<table>
+  <thead><tr><th>Option</th><th>Pros</th><th>Cons</th><th>Decision</th></tr></thead>
+  <tbody>
+  <tr><td><b>SQLite (WAL) by default</b></td><td>Zero setup, one file, fast enough for a few rows per second, migrations via Alembic</td><td>Single-writer; not for multi-process deployments</td><td><b>Chosen default</b></td></tr>
+  <tr><td>PostgreSQL via <code>DATABASE_URL</code></td><td>Multi-process, JSONB, native UUID</td><td>Needs a service (Docker Compose provided)</td><td><b>Supported option</b>; migration round-trip tested on both</td></tr>
+  <tr><td>Redis / message broker + DB</td><td>Decoupled workers</td><td>Extra infrastructure, excluded by non-goals</td><td>Rejected</td></tr>
+  </tbody>
+</table>
+
+<h3>5.5 Frame scheduling under several phones (ADR 0006)</h3>
+<table>
+  <thead><tr><th>Option</th><th>Pros</th><th>Cons</th><th>Decision</th></tr></thead>
+  <tbody>
+  <tr><td><b>Per-camera latest-frame mailbox + round-robin worker</b></td><td>Each camera keeps only its newest frame, bounded memory, fair share per camera, latency bounded by one round</td><td>Frames are dropped on purpose (counted as <code>dropped_replaced</code>)</td><td><b>Chosen</b></td></tr>
+  <tr><td>Shared FIFO queue</td><td>Simplest</td><td>Queue grows under load, stale frames, a fast phone starves the others (lab: p99 643 ms vs 380 ms)</td><td>Kept only as experiment baseline (E5)</td></tr>
+  <tr><td>One worker thread per camera</td><td>Isolation</td><td>GPU/MPS is shared anyway; contention and memory grow with cameras</td><td>Rejected</td></tr>
+  </tbody>
+</table>
+
+<h3>5.6 Device authentication (ADR 0005) and rate limiting (ADR 0002)</h3>
+<table>
+  <thead><tr><th>Option</th><th>Pros</th><th>Cons</th><th>Decision</th></tr></thead>
+  <tbody>
+  <tr><td><b>Opaque 256-bit random device tokens, stored as SHA-256</b></td><td>Instant revocation, no signing key, one indexed lookup, never in URLs/logs</td><td>Server-side state (one row per camera)</td><td><b>Chosen</b></td></tr>
+  <tr><td>Signed JWT</td><td>Stateless</td><td>Revocation needs a deny-list anyway; leaked token valid until expiry; key management</td><td>Rejected</td></tr>
+  <tr><td>In-process sliding-window limiter vs slowapi</td><td>Deterministic tests with injected clock; no extra dependency</td><td>Per-process (acceptable on one host)</td><td><b>Chosen</b> (ADR 0002)</td></tr>
+  </tbody>
+</table>
+
+<h3>5.7 Frontend</h3>
+<table>
+  <thead><tr><th>Option</th><th>Pros</th><th>Cons</th><th>Decision</th></tr></thead>
+  <tbody>
+  <tr><td><b>React 19 + TypeScript + Vite, TanStack Query</b></td><td>Typed API client, canvas overlays easy, Playwright tooling, largest ecosystem</td><td>Bundle size larger than Svelte</td><td><b>Chosen</b> — same pages serve the dashboard and the phone (pair/camera)</td></tr>
+  <tr><td>Vue 3</td><td>Simple reactivity</td><td>No advantage for canvas-heavy UI</td><td>Rejected</td></tr>
+  <tr><td>Svelte</td><td>Smallest bundle</td><td>Smaller ecosystem for testing/tooling</td><td>Rejected</td></tr>
+  <tr><td>Server-rendered overlays (JPEG with boxes)</td><td>Dumb client</td><td>One encode per subscriber, no privacy mode, pixels instead of data</td><td>Rejected (ADR 0007: overlays drawn client-side from JSON)</td></tr>
+  </tbody>
+</table>
+
+<!-- ================= 6 ================= -->
+<h2 id="s6" class="pb">6. Requirements specification</h2>
+<p>Requirement IDs are the ones used in the implementation specification (<code>docs/IMPLEMENTATION_SPEC.md</code>, Sections C–D), in test names and in milestone acceptance. Priority follows MoSCoW: <b>M</b> must, <b>S</b> should, <b>C</b> could. “Verified by” names the automated suite or manual check that proves the criterion.</p>
+
+<h3>6.1 Functional requirements</h3>
+<table>
+  <thead><tr><th style="width:9%">ID</th><th style="width:30%">Requirement</th><th style="width:4%">Pr.</th><th>Acceptance criteria</th><th style="width:16%">Verified by</th><th style="width:7%">Status</th></tr></thead>
+  <tbody>
+  <tr><td>F-ADM-1/2</td><td>Single admin account; Argon2id password hash from <code>.env</code>; server-side session cookie (HttpOnly, Secure, SameSite=Strict, 12 h idle)</td><td>M</td><td>Server refuses to start without a hash and prints the CLI command; login/logout work; password rotation invalidates all sessions</td><td>unit/test_auth, integration/test_api_auth</td><td>Done (M1)</td></tr>
+  <tr><td>F-SES-1/2</td><td>Create, list, rename, archive monitoring sessions; session has 0..N cameras, camera has 0..N zones</td><td>M</td><td>CRUD endpoints return the documented shapes; archived sessions reject new phones</td><td>integration/test_api_sessions</td><td>Done (M1)</td></tr>
+  <tr><td>F-PAIR-1/2</td><td>Admin mints a pairing PIN (5 min lifetime); phone redeems it once and receives a camera id and device token</td><td>M</td><td>PIN single-use (two concurrent redeems → one wins); lockout after max attempts; PIN never appears in any response except mint</td><td>unit/test_pairing, security/test_pairing_security</td><td>Done (M2)</td></tr>
+  <tr><td>F-CAM-1/2/3</td><td>Camera statuses paired/online/offline/paused/error/revoked; settings (fps 1–30, JPEG 30–95, long edge 640–1920, confidence, privacy mode) pushed to the phone within 2 s</td><td>M</td><td>Offline detected within 12 s; settings message arrives on the camera socket after PATCH; list shows fps, drop ratio, RTT, occupancy</td><td>integration/test_api_cameras, test_ws_camera</td><td>Done (M2–M3)</td></tr>
+  <tr><td>F-PHONE-1…7</td><td>Phone page: secure-context check, getUserMedia rear camera, capture at target fps, ≤ 1 unsent frame, reconnect with backoff, pause on hidden tab, ping/pong RTT, “forget this phone”</td><td>M</td><td>Page never shows a PIN form that cannot succeed; streaming resumes after a reload; close code 4003 stops and clears the token</td><td>e2e/pairing.spec.ts, manual iOS checklist</td><td>Done (M3); Android unverified</td></tr>
+  <tr><td>F-ZONE-1…4</td><td>Polygon editor on the live frame (3–20 vertices), stored in normalised coordinates, validated as a simple polygon; settings active_rule, enter_frames, exit_frames, enabled; needs_review on aspect change</td><td>M</td><td>Invalid polygons rejected with 422; saving and reloading reproduces the same pixels; editor usable with mouse and keyboard</td><td>unit/test_geometry, integration/test_api_zones, e2e/zones.spec.ts</td><td>Done (M4)</td></tr>
+  <tr><td>F-CV-1</td><td>Person detection with YOLOv8n, class 0 only, device auto-selected (mps → cuda → cpu)</td><td>M</td><td>Golden image yields ≥ 1 box with conf ≥ 0.3 inside the fixture zone; model SHA-256 shown on Health</td><td>cv/test_model_golden (make test-model)</td><td>Done (M4)</td></tr>
+  <tr><td>F-CV-2</td><td>All six membership rules computed for every detection and zone, every frame; active rule drives the state machine</td><td>M</td><td>Invariants <code>all ⊆ majority ⊆ any ⊆ bbox_overlap</code> and <code>bottom_center ⊆ any</code> hold on 1 000 random cases; per-rule counts in every frame result</td><td>unit/test_rules (Hypothesis)</td><td>Done (M4)</td></tr>
+  <tr><td>F-CV-3/4</td><td>Zone state machine with hysteresis; events zone_entered / zone_cleared / occupancy_changed persisted and pushed within 100 ms</td><td>M</td><td>1-frame blip → no event; 3 frames → entered; flicker stays occupied until exit_frames; exactly one entered and one cleared per visit</td><td>unit/test_state_machine, cv/test_pipeline_events</td><td>Done (M4)</td></tr>
+  <tr><td>F-CV-5</td><td>Dashboard overlays: boxes with confidence, three bottom anchors, zone polygon green/red, per-zone count — drawn client-side from JSON</td><td>M</td><td>Overlay scales correctly when the server down-scaled the frame; privacy mode shows overlays without video</td><td>e2e screenshots, manual</td><td>Done (M4)</td></tr>
+  <tr><td>F-DASH-1…4</td><td>Pages: login, sessions, session detail, camera detail, events, security, health; live view via dashboard socket; loading/empty/error states; metrics panel</td><td>M</td><td>Every list has loading, empty and error states; preview rate ≤ processed fps; metrics every 2 s</td><td>e2e suite, Playwright screenshots</td><td>Done (M2–M4)</td></tr>
+  <tr><td>F-EXP-1</td><td>CSV export of filtered events and per-camera metric samples, one column per rule</td><td>S</td><td>CSV columns match Section K of the spec; export respects filters</td><td>integration/test_api_events</td><td>Done (M4)</td></tr>
+  <tr><td>F-EVAL-1/2</td><td>Evaluation CLI runs detector + rules + state machine on a video or image sequence with zone and ground-truth files; recorder writes frames and results for re-evaluation</td><td>M</td><td>Outputs results.csv, per_frame.jsonl, metrics.json, report.md; metrics on a synthetic 100-frame sequence equal hand-computed values</td><td>cv tests (planned), eval CLI</td><td>In progress (M5, #13)</td></tr>
+  <tr><td>F-EVAL-3</td><td>Load test against a live server with 1–5 fake phones, reporting fps, drop ratio, span percentiles and fairness ratio</td><td>S</td><td>Fairness ratio ≤ 1.3 under “latest”; memory growth &lt; 20 %</td><td>tests/load/run_loadtest.py</td><td>Done (M3)</td></tr>
+  <tr><td>F-SEC-1/2/3</td><td>Admin routes and dashboard socket require the session; camera socket requires a device token; rate limits 5/min login, 10/min + 30/10 min redeem; security log</td><td>M</td><td>429 with Retry-After; login timing for unknown vs wrong password within 20 %; tokens never in logs or responses</td><td>security/* (8 tests)</td><td>Done (M1–M2)</td></tr>
+  <tr><td>F-PRIV-1/2/3</td><td>No frame written to disk unless recording is enabled; privacy mode per camera; persistent “this phone is streaming” notice</td><td>M</td><td>grep of data/ after a session shows no images; privacy-mode camera sends no binary to dashboards</td><td>integration/test_ws_dashboard</td><td>Done (M4)</td></tr>
+  <tr><td>F-ALERT-1</td><td>External alert output (webhook / GPIO) on zone_entered for a driver-facing light</td><td>C</td><td>Configurable endpoint called within 200 ms of the event</td><td>—</td><td>Planned (after M6)</td></tr>
+  </tbody>
+</table>
+
+<h3>6.2 Non-functional requirements</h3>
+<table>
+  <thead><tr><th style="width:10%">ID</th><th style="width:16%">Area</th><th>Requirement and acceptance criterion</th><th style="width:4%">Pr.</th><th style="width:18%">Verified by</th></tr></thead>
+  <tbody>
+  <tr><td>NF-SEC</td><td>Security</td><td>HTTPS/WSS only (mkcert locally); Argon2id; SHA-256 for tokens/PINs/session ids with salted PINs; constant-time comparison; CSRF via SameSite + X-Requested-With; CSP when FastAPI serves the SPA; no secrets in logs or repo</td><td>M</td><td>security suite; CSP header test; .env git-ignored</td></tr>
+  <tr><td>NF-LAT</td><td>Latency</td><td>Server-side receive → dashboard-send p50 ≤ 150 ms and p99 ≤ 400 ms with 3 phones at 10 fps on an Apple Silicon laptop. Goal for the metrics panel; acceptance = numbers are measured and reported correctly</td><td>S</td><td>E5/E6 load test and metrics export</td></tr>
+  <tr><td>NF-THR</td><td>Throughput</td><td>3 phones × 10 fps processed without unbounded memory; 5 phones degrade gracefully (drops counted, no crash)</td><td>M</td><td>make test-load</td></tr>
+  <tr><td>NF-REL</td><td>Reliability</td><td>Phone disconnects, server restarts and worker exceptions never lose persisted data; a worker exception marks one camera error and others continue; 8 h run with &lt; 20 % memory growth</td><td>M</td><td>integration tests; soak test (M6)</td></tr>
+  <tr><td>NF-PERF</td><td>Performance</td><td>Decode + inference + rules + fan-out for a 1280×720 frame ≤ 60 ms p50 on MPS (reported, not a gate); CPU fallback works at reduced fps</td><td>S</td><td>timings in frame_result; make test-model</td></tr>
+  <tr><td>NF-MAINT</td><td>Maintainability</td><td>mypy strict on <code>publicsafe/core</code>; ruff, black, eslint, prettier, tsc clean; core importable without FastAPI; ADR for every listed decision; core coverage ≥ 90 %, overall ≥ 75 %</td><td>M</td><td>make lint; coverage report</td></tr>
+  <tr><td>NF-PORT</td><td>Portability</td><td>macOS Apple Silicon primary; Linux x86 with CPU or CUDA runs the test suite (CI-ready); Windows not required</td><td>S</td><td>make test on Linux runner</td></tr>
+  <tr><td>NF-PRIV</td><td>Privacy</td><td>Logs contain camera ids and sizes, never frame contents; events and metrics retained until the admin deletes the session</td><td>M</td><td>log grep test</td></tr>
+  <tr><td>NF-ACC</td><td>Accessibility</td><td>Dashboard keyboard-navigable; colour is never the only status indicator</td><td>S</td><td>manual check, Playwright</td></tr>
+  <tr><td>NF-OBS</td><td>Observability</td><td>Structured JSON logs with request and camera ids; /api/health and /api/metrics</td><td>S</td><td>M6</td></tr>
+  </tbody>
+</table>
+
+<!-- ================= 7 ================= -->
+<h2 id="s7" class="pb">7. Architecture and diagrams</h2>
+<p>public.safe is a three-tier system on one local network: phones capture, one laptop processes, browsers observe. The diagrams below are drawn in PlantUML (C4 notation for context and component); sources are in <code>docs/diagrams/*.puml</code> and exports in <code>docs/diagrams/export/</code> so they can be edited with any PlantUML tool. Architecture decisions are recorded in nine ADRs (<code>docs/adr/</code>), listed in Section 7.6.</p>
+
+<h3>7.1 System context</h3>
+<figure><img src="img/01-system-context.png" style="width:88%"><figcaption>Figure 7.1. System context (C4 level 1). The driver-warning device is a planned external system.</figcaption></figure>
+
+<h3>7.2 Use cases</h3>
+<figure><img src="img/02-use-case.png" style="width:60%"><figcaption>Figure 7.2. Use case diagram: three actors, fifteen use cases grouped by area.</figcaption></figure>
+
+<h3>7.3 Component diagram (draft)</h3>
+<figure><img src="img/03-component.png" style="width:100%"><figcaption>Figure 7.3. Components in the three containers (phone, laptop backend, dashboard). The evaluation CLI reuses the detector, rules and state machine unchanged, which is what makes offline results comparable with live ones.</figcaption></figure>
+<p><b>Processing path.</b> The phone encodes a JPEG and sends it over the camera WebSocket. The ingest handler puts it into that camera’s <i>LatestFrameSlot</i> without decoding; an unread older frame is replaced and counted. One inference worker thread takes frames round-robin across cameras, decodes, runs YOLOv8n (person class only), computes all six membership rules for every detection and every enabled zone, feeds the active rule’s count into the zone state machine, persists events and metric samples, and publishes a <code>frame_result</code> JSON (plus the JPEG unless privacy mode) to subscribed dashboards. The dashboard draws overlays on a canvas from that JSON. Every stage is timed (<code>timings</code> in the frame result) so latency can be attributed.</p>
+
+<h3>7.4 Data model</h3>
+<figure><img src="img/04-data-model.png" style="width:82%"><figcaption>Figure 7.4. Entity–relationship diagram (Alembic migration 0001). Tokens and PINs are stored only as hashes; event rows never contain images.</figcaption></figure>
+
+<h3>7.5 Pairing, streaming and event flow</h3>
+<figure><img src="img/05-sequence-stream.png" style="width:95%"><figcaption>Figure 7.5. Sequence from minting a PIN to a <code>zone_entered</code> event on the dashboard.</figcaption></figure>
+
+<h3>7.6 Architecture decision records</h3>
+<table>
+  <thead><tr><th>ADR</th><th>Decision</th><th>Milestone</th></tr></thead>
+  <tbody>
+  <tr><td>0001</td><td>Python 3.12 via uv, fully pinned freeze, headless OpenCV only</td><td>M0</td></tr>
+  <tr><td>0002</td><td>In-process sliding-window rate limiter instead of slowapi</td><td>M1</td></tr>
+  <tr><td>0003</td><td>SQLite by default, PostgreSQL by DATABASE_URL</td><td>M1</td></tr>
+  <tr><td>0004</td><td>WebSocket authentication by first message, after accept</td><td>M2</td></tr>
+  <tr><td>0005</td><td>Opaque random device tokens instead of JWT</td><td>M2</td></tr>
+  <tr><td>0006</td><td>Per-camera latest-frame mailbox with a round-robin scheduler</td><td>M3</td></tr>
+  <tr><td>0007</td><td>Overlays are rendered client-side from JSON</td><td>M4</td></tr>
+  <tr><td>0008</td><td>All membership rules computed every frame</td><td>M4</td></tr>
+  <tr><td>0009</td><td>AGPL-3.0 Ultralytics behind the Detector seam; repository licensed AGPL-3.0</td><td>M4</td></tr>
+  </tbody>
+</table>
+<p class="small">Alignment check: every functional requirement in Section 6 maps to a component in Figure 7.3 (pairing → Security + HTTP API; capture → Capture loop + ingest; zones → ZoneEditor + Geometry; events → State machine + Repository + fan-out), every entity in Figure 7.4 is written by exactly one component, and every use case in Figure 7.2 is exercised by at least one automated test (Section 9.1).</p>
+
+<!-- ================= 8 ================= -->
+<h2 id="s8" class="pb">8. UX / prototype</h2>
+<p>The prototype is a running system, not a mock-up: milestones M0–M4 are implemented and tagged. Screenshots below were taken by the Playwright suite in Chromium against the test backend (the green picture is Chromium’s synthetic camera standing in for a phone) and from the earlier research prototype on a real iPhone at night. The repository contains run instructions (<code>README.md</code>, <code>docs/SETUP_MACOS.md</code>, <code>docs/PHONE_SETUP.md</code>).</p>
+<div class="box"><b>Prototype access.</b> Repository: <a href="https://github.com/BekdauletBol/public_final/tree/prob-period-1">github.com/BekdauletBol/public_final/tree/prob-period-1</a> · Screenshots: <code>docs/screenshots/m2…m4/</code> · Run: <code>make setup &amp;&amp; make certs &amp;&amp; make dev</code> → <code>https://localhost:5173</code>. The system runs on a local network only; a live demo is shown at the pre-defence. <span class="confirm">[optional: link to a demo video]</span></div>
+
+<h3>8.1 Key user scenarios</h3>
+<div class="grid2">
+  <figure><img src="img/light-sessions.png"><figcaption>Sessions list (light theme).</figcaption></figure>
+  <figure><img src="img/dark-pin-modal.png"><figcaption>Pairing modal: PIN, link and QR (dark theme).</figcaption></figure>
+  <figure><img src="img/m3-session-live.png"><figcaption>Session page: live camera tile, status, per-camera metrics.</figcaption></figure>
+  <figure><img src="img/m4-zone-editor.png" style="max-height:95mm;width:auto"><figcaption>Zone editor: polygon on the live frame, rule and hysteresis settings.</figcaption></figure>
+  <figure><img src="img/m4-camera-events.png"><figcaption>Camera page: zone overlay, one entered and one cleared event, per-rule counts.</figcaption></figure>
+  <figure><img src="img/m4-events.png"><figcaption>Events page: filters by session, camera, type, time; CSV export.</figcaption></figure>
+</div>
+<div class="grid3">
+  <figure><img src="img/m3-phone-streaming.png" style="max-height:80mm;width:auto"><figcaption>Phone page while streaming (current version).</figcaption></figure>
+  <figure><img src="img/proto-phone-old.png" style="max-height:80mm;width:auto"><figcaption>Research prototype on iPhone (previous version).</figcaption></figure>
+  <figure><img src="img/light-login-error.png" style="max-height:80mm;width:auto"><figcaption>Login with error state.</figcaption></figure>
+</div>
+
+<h3>8.2 Detection in real conditions (research prototype, night)</h3>
+<div class="grid3">
+  <figure><img src="img/proto-night-empty.png"><figcaption>Empty scene: no detections, zone stays safe.</figcaption></figure>
+  <figure><img src="img/proto-night-single.png"><figcaption>One person inside the zone: alert state.</figcaption></figure>
+  <figure><img src="img/proto-night-multi.png"><figcaption>Two persons counted inside the zone.</figcaption></figure>
+</div>
+<figure><img src="img/proto-dashboard-old.png" style="width:70%"><figcaption>Figure 8.1. Previous dashboard version (research prototype): analytics panel and violation alert. The current version replaced it with the React dashboard above.</figcaption></figure>
+
+<h3>8.3 API and data examples</h3>
+<p>Besides the UI, external systems interact through the REST API and the dashboard WebSocket. Example of a frame result delivered to dashboards (and written by the evaluation CLI line-by-line):</p>
+<pre>{"type":"frame_result","camera_id":"c1…","seq":1842,"w":1280,"h":720,
+ "detections":[{"bbox":[412,180,560,640],"conf":0.83,
+                "anchors":{"bl":[412,640],"bc":[486,640],"br":[560,640]}}],
+ "zones":[{"zone_id":"z1…","active_rule":"bottom_center","state":"occupied",
+           "debounced_count":1,
+           "counts":{"bbox_overlap":1,"bottom_center":1,"three_point_any":1,
+                     "three_point_majority":1,"three_point_all":0,"bottom_strip":1}}],
+ "timings":{"decode_ms":4.1,"infer_ms":49.2,"rules_ms":0.3,"total_ms":56.9}}</pre>
+<p>Event row (CSV export): <code>t_server, session, camera, zone, type, count_before, count_after, active_rule, bbox_overlap, bottom_center, three_point_any, three_point_majority, three_point_all, bottom_strip</code>. Evaluation command: <code>publicsafe eval run --config configs/e1_mot17.yaml</code>.</p>
+
+<h3>8.4 Concept of a field installation (future)</h3>
+<figure><img src="img/concept-installation.jpg" style="width:62%"><figcaption>Figure 8.2. Concept visualisation (AI-generated illustration, not a prototype): camera node, ground-level LED indicator and overhead driver alert connected to the dashboard. Hardware is out of scope for the diploma; the event interface that would drive it is F-ALERT-1.</figcaption></figure>
+
+<!-- ================= 9 ================= -->
+<h2 id="s9" class="pb">9. Verification and evaluation plan</h2>
+
+<h3>9.1 Testing plan (software verification)</h3>
+<p>218 automated tests exist at the tagged version; all run locally without network or GPU except the two real-model tests. Every milestone was accepted only when its suite passed (<code>make test</code>, <code>make lint</code>).</p>
+<table>
+  <thead><tr><th>Level</th><th>What is checked</th><th>Tooling</th><th>Tests</th></tr></thead>
+  <tbody>
+  <tr><td>Unit</td><td>Geometry anchors and all six rules on hand-built cases (box straddling the top edge → only bbox_overlap positive), property test of rule invariants on 1 000 random boxes/polygons, cv2.pointPolygonTest cross-check; state machine sequences; mailbox fairness and drop counting; pairing (single use, lockout, concurrency); rate limiter with injected clock; config</td><td>pytest, Hypothesis</td><td>136</td></tr>
+  <tr><td>Integration</td><td>Every API endpoint happy path and validation errors, cookie auth, CSRF header, CSV shape; camera socket close codes (4001/4003/4004/1009/4000), ack cadence, ping/pong offset; dashboard subscribe, frame_result, event, privacy mode; Alembic round-trip on SQLite and PostgreSQL; scripted fake phone</td><td>pytest-asyncio, httpx, Starlette TestClient</td><td>63</td></tr>
+  <tr><td>Security</td><td>429 with Retry-After; login timing unknown-vs-wrong within 20 % over 50 runs; tokens and PINs never in logs, responses or rows; CSP and cookie flags</td><td>pytest</td><td>8</td></tr>
+  <tr><td>Computer vision</td><td>Scripted 60-frame sequence → expected events; zone payloads; recorder; golden image with real YOLOv8n (≥ 1 box inside the fixture zone); FP16 vs FP32 timing</td><td>pytest, make test-model</td><td>8</td></tr>
+  <tr><td>End-to-end</td><td>Login → session → PIN → pair in a second browser context with a fake camera → streaming → tile online → draw polygon → event appears</td><td>Playwright, Chromium</td><td>3</td></tr>
+  <tr><td>Load</td><td>3 fake phones at 15 fps against a live server with a 20 ms fake detector: fairness ratio ≤ 1.3, memory growth &lt; 20 %, p99 queue wait reported; repeated with FIFO to show growth</td><td>Python, psutil</td><td>1</td></tr>
+  </tbody>
+</table>
+<p>Manual checks: iOS Safari pairing and streaming checklist (<code>docs/PHONE_SETUP.md</code>); Android Chrome is supported by design but not yet verified on a device (risk R3).</p>
+
+<h3>9.2 Outcome metrics</h3>
+<ul>
+  <li><b>Per-person zone membership</b> (each matched detection × rule): TP/FP/FN/TN → precision, recall, F1, FPR; detector misses reported separately as <code>fn_missed_detection</code> so rule errors are distinguishable from detector errors.</li>
+  <li><b>Event level</b>: zone_entered events matched within ±10 frames → event precision/recall/F1, timing error median and p90, duplicate-event rate.</li>
+  <li><b>Statistics</b>: 5 000-sample bootstrap 95 % CIs (seed 1234); exact McNemar test on paired per-person outcomes for each pair of rules; boundary analysis — error rate per 10 px bin of the ground-truth foot distance to the polygon edge.</li>
+  <li><b>Latency</b>: server-side spans (queue wait, decode, inference, rules, fan-out) as p50/p90/p95/p99; end-to-end estimate from phone timestamps with RTT-based uncertainty; fairness ratio = max ÷ min processed fps across cameras; drop ratio.</li>
+</ul>
+
+<h3>9.3 Baselines, datasets and measurement conditions</h3>
+<table>
+  <tr><th style="width:22%">Baseline rule</th><td><code>bbox_overlap</code> — any intersection of the person box with the zone, the rule used by commercial analytics [6, 7]. Secondary baseline: <code>bottom_center</code> (one foot point, as in Frigate).</td></tr>
+  <tr><th>Baseline scheduler</th><td>Shared unbounded FIFO queue (<code>SCHEDULER_STRATEGY=fifo</code>), the design of the research prototype.</td></tr>
+  <tr><th>Datasets</th><td><b>MOT17</b> train sequences 02, 04, 09 (1920×1080, 25–30 fps, full-body ground-truth boxes; 04 is a night street from an elevated viewpoint) — primary; <b>WILDTRACK</b> (7 calibrated cameras, ground-plane positions) — geometric check with a metric zone; <b>own recordings</b> via <code>EVAL_RECORD=1</code> for the four lab scenarios plus night, occlusion and tangential approach, with consent of people filmed.</td></tr>
+  <tr><th>Zone ground truth</th><td>Three polygons per sequence (strip, corner, irregular) committed as JSON; per-person <code>in_zone</code> labels produced with <code>publicsafe eval annotate</code> every 5th frame by two annotators; Cohen’s κ reported; auto-derived labels used only for sanity checks.</td></tr>
+  <tr><th>Conditions</th><td>Detector YOLOv8n, conf 0.30, imgsz 640, FP32; weights SHA-256 recorded; seeds fixed; <code>run.json</code> with host, device, package versions, git commit and config hash in every output directory. Live tests: Apple Silicon laptop, 5 GHz Wi-Fi, phones at 10 fps, 1280×720, JPEG quality 65.</td></tr>
+</table>
+
+<h3>9.4 Pre-registered experiments and success criteria</h3>
+<table>
+  <thead><tr><th>Id</th><th style="width:28%">Question</th><th>Success criterion (fixed before running; copied from <code>docs/EVALUATION.md</code>)</th><th style="width:12%">Status</th></tr></thead>
+  <tbody>
+  <tr><td>E1</td><td>Foot-anchored rules vs bbox overlap</td><td>At least one of bottom_center / three_point_* has precision ≥ bbox_overlap + 0.10 with non-overlapping 95 % CIs and recall loss ≤ 0.05, on ≥ 2 of 3 data sources</td><td>Harness in progress (#13, #14)</td></tr>
+  <tr><td>E2</td><td>Which 3-point combination; invariants</td><td>All rule results reported; invariants hold on every sequence; active rule recommended by F1 with boundary analysis</td><td>Planned</td></tr>
+  <tr><td>E3</td><td>Hysteresis effect on duplicate events</td><td>Duplicate-event rate falls ≥ 50 % with 3-in/5-out vs none; timing error p90 ≤ 10 frames</td><td>Planned</td></tr>
+  <tr><td>E4</td><td>Tracking (optional)</td><td>Event F1 improves or is unchanged; reported either way</td><td>Optional</td></tr>
+  <tr><td>E5</td><td>Latest-frame mailbox vs FIFO under load</td><td>With 3 cameras p99 queue wait under latest ≥ 30 % lower than FIFO; fairness ratio ≤ 1.3</td><td>Load test exists; benchmark #15</td></tr>
+  <tr><td>E6</td><td>Live latency with real phones</td><td>p50 reported; e2e estimate with RTT uncertainty; ≤ 200 ms p50 is a goal, not a gate</td><td>Needs 2–3 phones</td></tr>
+  <tr><td>E7</td><td>Difficult conditions (night, rain, occlusion)</td><td>Per-condition recall and FPR tabulated; descriptive</td><td>Planned</td></tr>
+  </tbody>
+</table>
+<p>How the project aim will be demonstrated: (1) the live system at the pre-defence with a phone, a zone and events; (2) E1/E2 tables with confidence intervals showing whether the foot-point rule reduces false alarms on public data; (3) E5 showing bounded tail latency; (4) the test suite and lint passing on the tagged commit.</p>
+
+<!-- ================= 10 ================= -->
+<h2 id="s10" class="pb">10. Project management and risks</h2>
+
+<h3>10.1 Repository, task tracking and workflow</h3>
+<table>
+  <tr><th style="width:26%">Git repository</th><td><a href="https://github.com/BekdauletBol/public_final">github.com/BekdauletBol/public_final</a> — public, AGPL-3.0, 28 commits from 10 Oct to 18 Oct 2026, one branch (<code>main</code>) with milestone-scoped commits, tag <code>prob-period-1</code></td></tr>
+  <tr><th>Task tracking</th><td>GitHub Projects board “public.safe — diploma” (used instead of YouTrack, as the form allows another tool): <a href="https://github.com/users/BekdauletBol/projects/1">github.com/users/BekdauletBol/projects/1</a>. 20 issues (#1–#15, #17–#21) with assignee, priority, due date, expected outcome, acceptance criteria and links to the implementing commits; 16 Done, 1 In progress, 3 Todo. Board screenshots are submitted separately (<code>Bolatov_TaskBoard.pdf</code>).</td></tr>
+  <tr><th>Traceability</th><td>Each issue lists the commit hashes that implement it (e.g. #10 → 8ec5122, 462c338, 62caa94); commit messages carry the milestone prefix (M0…M4). For an individual project, supervisor review of significant changes happens at the probation checkpoints.</td></tr>
+  <tr><th>Repository structure</th><td><code>backend/publicsafe/</code> (api, ws, core, worker, db, eval), <code>backend/tests/</code> (unit, integration, security, cv, load), <code>frontend/src/</code> (pages, components, lib), <code>frontend/e2e/</code>, <code>docs/</code> (setup, operations, phone setup, evaluation, adr/, screenshots/, diagrams/, report/), <code>Makefile</code>, <code>docker-compose.yml</code>, <code>.env.example</code>, <code>.gitignore</code></td></tr>
+</table>
+
+<h3>10.2 Milestones</h3>
+<table>
+  <thead><tr><th>Milestone</th><th>Scope</th><th>Issues</th><th>Status / date</th></tr></thead>
+  <tbody>
+  <tr><td>M0</td><td>Repository scaffold, toolchain pinning, HTTPS dev setup</td><td>#1</td><td>Done, 10 Oct</td></tr>
+  <tr><td>M1</td><td>Database, migrations, admin auth, rate limiting, sessions/cameras/zones API</td><td>#2, #3</td><td>Done, 10 Oct</td></tr>
+  <tr><td>M2</td><td>PIN pairing, device credentials, camera and dashboard WebSockets, dashboard UI</td><td>#4–#6</td><td>Done, 10 Oct</td></tr>
+  <tr><td>M3</td><td>Frame ingest, mailbox scheduler, phone capture page, metrics, load test, E2E suite</td><td>#7–#9</td><td>Done, 10 Oct</td></tr>
+  <tr><td>M4</td><td>YOLOv8n detection, six rules, state machine, zone editor, overlays, events, CSV</td><td>#10–#12</td><td>Done, 10 Oct</td></tr>
+  <tr><td>—</td><td>Licence, docs cleanup, README for reviewers, tag prob-period-1</td><td>#17–#20</td><td>Done, 18 Oct</td></tr>
+  <tr><td>M5</td><td>Evaluation harness: datasets, annotation, metrics, rule comparison (E1–E3), latency benchmark (E5)</td><td>#13, #14, #15</td><td>In progress; due 7–21 Nov</td></tr>
+  <tr><td>—</td><td>Approbation report (PDF)</td><td>#21</td><td>Due 28 Nov</td></tr>
+  <tr><td>M6</td><td>Structured logging, API reference, demo checklist, 8-hour soak test, Android verification, E6/E7</td><td>to be created</td><td>Planned, Dec 2026 – Feb 2027</td></tr>
+  </tbody>
+</table>
+
+<h3>10.3 Risks and dependencies</h3>
+<table>
+  <thead><tr><th>#</th><th style="width:30%">Risk</th><th>Likelihood / impact</th><th>Mitigation</th></tr></thead>
+  <tbody>
+  <tr><td>R1</td><td>Foot-point rules do not beat bbox overlap on public datasets (H1 fails)</td><td>Medium / high</td><td>Success criteria are pre-registered; a negative result is still reported with boundary analysis and the recommended rule is chosen by F1 — the system remains useful either way</td></tr>
+  <tr><td>R2</td><td>Laptop CPU/GPU throughput limits the number of phones (one worker, ~50 ms per frame)</td><td>High / medium</td><td>Latest-frame mailbox degrades gracefully (drops counted); YOLO11n or FP16 on CUDA behind the detector seam; target fps per camera configurable</td></tr>
+  <tr><td>R3</td><td>Only one iPhone available; Android Chrome unverified</td><td>High / medium</td><td>Fake phones in tests and load test; borrow Android devices for E6; manual checklist in docs</td></tr>
+  <tr><td>R4</td><td>Weather, night and occlusion degrade detection outdoors</td><td>High / medium</td><td>E7 measures per-condition recall; confidence threshold per camera; hysteresis suppresses flicker; night variant of the detector as fallback [13]</td></tr>
+  <tr><td>R5</td><td>Dataset licences (MOT17 CC BY-NC-SA, WILDTRACK unstated) restrict publication</td><td>Medium / low</td><td>Non-commercial research use; confirm WILDTRACK terms with EPFL before publishing; own recordings with consent as third source</td></tr>
+  <tr><td>R6</td><td>AGPL-3.0 obligations of Ultralytics if the system is offered as a service</td><td>Low / medium</td><td>Repository itself is AGPL-3.0; permissive detector can replace the adapter (ADR 0009)</td></tr>
+  <tr><td>R7</td><td>Privacy / legal concerns about filming public space (Law of RK No. 94-V)</td><td>Medium / high</td><td>No video stored by default, no identity inference, privacy mode, streaming notice on the phone; signage at pilot sites</td></tr>
+  <tr><td>R8</td><td>Manual annotation of zone ground truth is slow and subjective</td><td>Medium / medium</td><td>Annotate every 5th frame, two annotators, Cohen’s κ reported; annotation tool built into the CLI</td></tr>
+  <tr><td>R9</td><td>Time: M5 overlaps with other coursework; single developer</td><td>Medium / medium</td><td>Issues with due dates on the board; harness implemented incrementally (fetch → readers → metrics → report); supervisor checkpoints</td></tr>
+  <tr><td>R10</td><td>mkcert root certificate must be installed on every phone (manual on iOS)</td><td>High / low</td><td>Documented step with screenshots; served help page at /help/phone</td></tr>
+  </tbody>
+</table>
+<p><b>Dependencies:</b> Ultralytics weights download (once); MOT17 and WILDTRACK downloads; access to 2–3 phones for E6; supervisor availability for checkpoint reviews.</p>
+
+<h3>10.4 Next steps (to pre-defence 2)</h3>
+<ol>
+  <li>Finish the evaluation harness (#13): dataset fetch with checksum, MOT17 and image-sequence readers, annotation tool, metrics with bootstrap and McNemar, report generation.</li>
+  <li>Draw and commit zone polygons for MOT17-02/04/09; annotate with two annotators; run E1–E3 and write <code>docs/EVALUATION.md</code> results.</li>
+  <li>Run E5 latency benchmark (#15) with 1/2/3/5 fake phones and E6 with real phones.</li>
+  <li>Verify Android Chrome; add F-ALERT-1 webhook for an external warning light.</li>
+  <li>Extend the literature list with truck blind-spot and VRU-detection sources; agree a pilot site (yard or depot) for own recordings.</li>
+</ol>
+
+<!-- ================= 11 ================= -->
+<h2 id="s11" class="pb">11. Supervisor feedback</h2>
+<p>The supervisor, Nurgaliyeva Symbat Altybayevna, reviewed the student research work that precedes this project and the project materials at the probation checkpoint. Her written review of the research work (reproduced below) assesses the problem analysis, the edge architecture, the implementation with YOLOv8/FastAPI/WebSockets and the foot-point + point-in-polygon method, and the experimental design; the degree of independence is rated as high.</p>
+<figure><img src="img/supervisor-review.png" style="width:78%; border:1px solid #ccc"><figcaption>Figure 11.1. Supervisor’s written review of the research work (original, Russian).</figcaption></figure>
+
+<h3>11.1 Feedback on key deliverables and resulting decisions</h3>
+<div class="note">Rows marked <span class="confirm">[confirm]</span> are to be checked by the author; replace with the actual comments received (e.g. comments on the research paper) and the actions taken.</div>
+<table>
+  <thead><tr><th style="width:28%">Deliverable</th><th>Supervisor’s comment</th><th>Decision / action taken</th><th style="width:12%">Status</th></tr></thead>
+  <tbody>
+  <tr><td>Research work: problem analysis and related work</td><td>Limitations of centralised CCTV and the need for a distributed edge architecture are well argued (review, para. 2)</td><td>Kept as the basis of Sections 1, 3 and 4 of this report; comparison extended from 4 approaches to 6 named systems and 8 criteria</td><td>Done</td></tr>
+  <tr><td>Research work: experimental design and metrics</td><td>Measurements of detection accuracy, latency and comparison with baselines are appropriate (review, para. 3) <span class="confirm">[confirm: any specific comment on the ablation / dataset size]</span></td><td>Experiments re-registered with explicit success criteria (Section 9.4); evaluation moved from the lab-only data set to public datasets (MOT17, WILDTRACK) with bootstrap CIs and McNemar, because the lab ablation was found to be inconsistent with the stated rule</td><td>In progress (M5)</td></tr>
+  <tr><td>Research work: engineering decisions</td><td>Independent choice of computing architecture, spatial-verification algorithm and real-time stream handling is noted (review, para. 4)</td><td>Every such decision now recorded as an ADR with alternatives (Section 7.6); single shared queue replaced by per-camera mailbox (ADR 0006)</td><td>Done</td></tr>
+  <tr><td>Diploma topic wording (truck blind spots)</td><td><span class="confirm">[confirm: how the official title was agreed and whether the supervisor asked to keep the blind-spot focus]</span></td><td>Blind-spot areas treated as a configurable danger zone (loading bay, nearside of a parked truck); driver-facing alert kept as F-ALERT-1 for the next period</td><td>Agreed</td></tr>
+  <tr><td>Privacy and legal aspects</td><td><span class="confirm">[confirm]</span> Compliance with the Law of RK on personal data should be addressed</td><td>No video stored, privacy mode, streaming notice, no identity inference (F-PRIV-1…3); risk R7</td><td>Done</td></tr>
+  <tr><td>Probation-period materials (this report, repository, board)</td><td>Review scheduled at the checkpoint <span class="confirm">[confirm date]</span></td><td>Comments will be recorded in <code>docs/SUPERVISOR_FEEDBACK.md</code> and linked from the board</td><td>Pending</td></tr>
+  </tbody>
+</table>
+
+<!-- ================= 12 ================= -->
+<h2 id="s12" class="pb">12. References</h2>
+<ol class="small" style="padding-left:22pt">
+  <li>World Health Organization, <i>Global Status Report on Road Safety 2023</i>. Geneva: WHO, 2023. <a href="https://www.who.int/publications/i/item/9789240086517">who.int/publications/i/item/9789240086517</a></li>
+  <li>World Health Organization, <i>Kazakhstan — Country Profile: Global Status Report on Road Safety 2023</i>. Geneva: WHO, 2023.</li>
+  <li>A. Høye and A. Laureshyn, “SeeMe at the crosswalk: Before–after study of a pedestrian crosswalk warning system,” <i>Transportation Research Part F</i>, vol. 60, pp. 723–733, 2019.</li>
+  <li>S. M. Patella, S. Sportiello, S. Carrese, F. Bella, and F. Asdrubali, “The effect of a LED lighting crosswalk on pedestrian safety: Some experimental results,” <i>Safety</i>, vol. 6, no. 2, p. 20, 2020.</li>
+  <li>M. Costa, C. Lantieri, V. Vignali, N. Ghasemi, and A. Simone, “Evaluation of an integrated lighting-warning system on motorists’ yielding at unsignalized crosswalks during nighttime,” <i>Transportation Research Part F</i>, vol. 68, pp. 132–143, 2020.</li>
+  <li>D. Bharadwaj, S. Rao, and A. Bhatt, “YOLO-based real-time human detection for smart video surveillance at the edge,” in <i>Proc. IEEE INDICON</i>, 2021.</li>
+  <li>Y. Zhang et al., “ByteTrack: Multi-object tracking by associating every detection box,” in <i>Proc. ECCV</i>, LNCS 13682, Springer, 2022.</li>
+  <li>G. Jocher, A. Chaurasia, and J. Qiu, <i>Ultralytics YOLOv8</i>, 2023. <a href="https://github.com/ultralytics/ultralytics">github.com/ultralytics/ultralytics</a></li>
+  <li>B. Zhan, D. N. Monekosso, P. Remagnino, S. A. Velastin, and L.-Q. Xu, “Crowd analysis: A survey,” <i>Machine Vision and Applications</i>, vol. 19, no. 5–6, pp. 345–357, 2008.</li>
+  <li>M. Shimrat, “Algorithm 112: Position of point relative to polygon,” <i>Communications of the ACM</i>, vol. 5, no. 8, p. 434, 1962.</li>
+  <li>E. Maltezos et al., “A video analytics system for person detection combined with edge computing,” <i>Computation</i>, vol. 10, no. 3, p. 35, 2022. doi: 10.3390/computation10030035</li>
+  <li>R. Al Amin, M. Hasan, V. Wiese, and R. Obermaisser, “FPGA-based real-time object detection and classification system using YOLO for edge computing,” in <i>Proc. IEEE</i>, 2024. doi: 10.1109/10537163</li>
+  <li>T. Wang, S. Ren, and H. Zhang, “Nighttime wildlife object detection based on YOLOv8-night,” <i>Electronics Letters</i>, 2024. doi: 10.1049/ell2.13305</li>
+  <li>H. V. L. B. Silva and A. Anpalagan, “EdgeML-driven real-time vehicle tracking and traffic control for traffic management in smart cities,” <i>Applied Sciences</i>, vol. 16, no. 5, p. 2216, 2026. doi: 10.3390/app16052216</li>
+  <li>U.S. Department of Transportation, “Exploring cost-effective computer vision solutions for smart transportation systems,” National Transportation Library, Rep. dot/72518, 2023. <a href="https://rosap.ntl.bts.gov/view/dot/72518">rosap.ntl.bts.gov/view/dot/72518</a></li>
+</ol>
+<p class="small"><b>Vendor and project documentation used in Section 4:</b> Mobileye Shield+ product page (ims.mobileye.com); Brigade Electronics, Sidescan Predict (brigade-electronics.com/detection-systems/sidescan-predict); Hikvision AcuSense overview; AXIS Object Analytics (axis.com/products/axis-object-analytics); Frigate NVR documentation, Zones (docs.frigate.video/configuration/zones); Ultralytics model documentation for YOLOv8 and YOLO11 (docs.ultralytics.com); WongKinYiu/yolov7 repository. Accessed October 2026.</p>
+
+<h2 id="sA" class="pb">Appendix A. Links to materials and survey screenshots</h2>
+<table>
+  <thead><tr><th style="width:34%">Material</th><th>Location (all at tag prob-period-1)</th></tr></thead>
+  <tbody>
+  <tr><td>Repository / tagged version</td><td><a href="https://github.com/BekdauletBol/public_final/tree/prob-period-1">github.com/BekdauletBol/public_final/tree/prob-period-1</a></td></tr>
+  <tr><td>README (overview, architecture, tests, status)</td><td><code>README.md</code></td></tr>
+  <tr><td>Implementation specification (requirements, API, CV pipeline, experiment plan)</td><td><code>docs/IMPLEMENTATION_SPEC.md</code></td></tr>
+  <tr><td>Architecture decision records</td><td><code>docs/adr/0001…0009</code></td></tr>
+  <tr><td>Diagrams — editable sources and exports</td><td><code>docs/diagrams/*.puml</code>, <code>docs/diagrams/export/*.png|svg</code></td></tr>
+  <tr><td>Evaluation plan, model checksum, FP16 measurement</td><td><code>docs/EVALUATION.md</code></td></tr>
+  <tr><td>Setup and operations</td><td><code>docs/SETUP_MACOS.md</code>, <code>docs/PHONE_SETUP.md</code>, <code>docs/OPERATIONS.md</code></td></tr>
+  <tr><td>Screenshots of the prototype</td><td><code>docs/screenshots/m2/</code>, <code>m3/</code>, <code>m4/</code></td></tr>
+  <tr><td>Automated tests</td><td><code>backend/tests/</code>, <code>frontend/e2e/</code></td></tr>
+  <tr><td>Task board</td><td><a href="https://github.com/users/BekdauletBol/projects/1">github.com/users/BekdauletBol/projects/1</a>; screenshots in <code>Bolatov_TaskBoard.pdf</code></td></tr>
+  <tr><td>Milestone commits</td><td>M0 <a href="https://github.com/BekdauletBol/public_final/commit/794e7333c7ec">794e733</a> · M1 <a href="https://github.com/BekdauletBol/public_final/commit/48573c484697">48573c4</a> · M2 <a href="https://github.com/BekdauletBol/public_final/commit/58fcc5e2d1ee">58fcc5e</a> · M3 <a href="https://github.com/BekdauletBol/public_final/commit/7211409f5c58">7211409</a> · M4 <a href="https://github.com/BekdauletBol/public_final/commit/8ec512222d3e">8ec5122</a> · history <a href="https://github.com/BekdauletBol/public_final/commits/prob-period-1">commits/prob-period-1</a></td></tr>
+  <tr><td>Research work (predecessor)</td><td>“Edge-distributed pedestrian monitoring system using YOLOv8 and geometric spatial analysis for real-time urban danger zone detection”, AITU, 2026 <span class="confirm">[optional: add link]</span></td></tr>
+  <tr><td>Survey (Google Forms)</td><td>Response summary screenshots below; <span class="confirm">[optional: add form link]</span></td></tr>
+  </tbody>
+</table>
+<div class="grid2">
+  <figure><img src="img/survey-form-1.png"><figcaption>Survey response summary, pedestrian section (screenshot).</figcaption></figure>
+  <figure><img src="img/survey-form-2.png"><figcaption>Survey response summary, obstacles and driver section (screenshot).</figcaption></figure>
+</div>
+
+</body>
+</html>

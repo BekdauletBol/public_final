@@ -195,6 +195,8 @@ Known limitations:
 | [docs/EVALUATION.md](docs/EVALUATION.md) | Model checksum, FP16 measurement, evaluation plan and success criteria |
 | [docs/adr/README.md](docs/adr/README.md) | Architecture decision records 0001 to 0009 |
 | [docs/IMPLEMENTATION_SPEC.md](docs/IMPLEMENTATION_SPEC.md) | The full implementation specification the project is built from |
+| [docs/diagrams/README.md](docs/diagrams/README.md) | Architecture diagrams: context, use case, component, data model, sequence; PlantUML sources and PNG/SVG exports |
+| [docs/report/SE-2405_Bolatov_ProbPeriod1.pdf](docs/report/SE-2405_Bolatov_ProbPeriod1.pdf) | Probation period 1 report |
 | [.env.example](.env.example) | Every configuration variable with its default |
 
 ## Author

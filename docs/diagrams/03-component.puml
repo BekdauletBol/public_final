@@ -1,0 +1,55 @@
+@startuml 03-component
+!include <C4/C4_Component>
+title public.safe — Component diagram (draft, prob-period-1)
+
+Container_Boundary(phone, "Phone (browser, iOS Safari / Android Chrome)") {
+  Component(pair, "Pair page", "React", "PIN entry, secure-context check")
+  Component(capture, "Capture loop", "TS, getUserMedia + canvas", "JPEG frames at target fps, ≤1 unsent frame, reconnect with backoff")
+}
+
+Container_Boundary(laptop, "Laptop — backend (Python 3.12, FastAPI, Uvicorn)") {
+  Component(api, "HTTP API", "FastAPI routers", "auth, sessions, cameras, zones, pairing, events, metrics, security, health")
+  Component(wscam, "/ws/camera ingest", "WebSocket", "first-message auth, frame_meta + binary JPEG, ack, ping/pong")
+  Component(wsdash, "/ws/dashboard fan-out", "WebSocket + hub", "subscribe cameras, frame_result JSON, previews, events, metrics")
+  Component(mailbox, "Per-camera mailbox + scheduler", "core/mailbox.py", "LatestFrameSlot per camera, round-robin; FIFO only for experiment E5")
+  Component(worker, "Inference worker", "worker/inference.py, pipeline.py", "decode → detect → rules → state machines → persist → hub")
+  Component(detector, "Detector seam", "core/detector.py", "Ultralytics YOLOv8n adapter (lazy import), FakeDetector, NullDetector")
+  Component(rules, "Geometry + rules", "core/geometry.py, rules.py", "6 membership rules every frame; invariants")
+  Component(sm, "Zone state machine", "core/state_machine.py", "enter/exit hysteresis → zone_entered / zone_cleared")
+  Component(sec, "Security", "api/security.py, ratelimit.py, pairing.py", "Argon2id, opaque device tokens, PIN redeem, sliding-window limits")
+  Component(repo, "Repository layer", "db/repo.py, SQLAlchemy, Alembic", "sessions, cameras, zones, events, metric samples, security log")
+  Component(eval, "Evaluation CLI", "eval/cli.py", "fetch datasets, annotate, run, agreement, loadtest (M5)")
+  ContainerDb(db, "SQLite (WAL) / PostgreSQL", "DATABASE_URL", "")
+}
+
+Container_Boundary(dash, "Dashboard (browser, React 19 + TypeScript)") {
+  Component(pages, "Pages", "Login, Sessions, SessionDetail, CameraDetail, Events, Security, Health", "")
+  Component(overlay, "LiveView + overlay canvas", "lib/overlay.ts", "draws boxes, anchors, polygon from JSON")
+  Component(zoneed, "ZoneEditor", "component", "polygon in normalised coordinates")
+  Component(apiclient, "API client + socket store", "TanStack Query, ws.ts", "")
+}
+
+Rel(pair, api, "POST /api/pair/redeem", "HTTPS")
+Rel(capture, wscam, "auth, frame_meta + JPEG", "WSS binary")
+Rel(wscam, sec, "token hash lookup")
+Rel(wscam, mailbox, "put(frame)")
+Rel(mailbox, worker, "next() round-robin")
+Rel(worker, detector, "detect(image, conf)")
+Rel(worker, rules, "compute_all_rules")
+Rel(worker, sm, "step(counts)")
+Rel(worker, repo, "persist events, metrics")
+Rel(worker, wsdash, "publish frame_result, events")
+Rel(api, sec, "login, CSRF, rate limits")
+Rel(api, repo, "CRUD")
+Rel(repo, db, "SQLAlchemy")
+Rel(apiclient, api, "REST /api", "HTTPS")
+Rel(apiclient, wsdash, "subscribe", "WSS")
+Rel(pages, apiclient, "")
+Rel(overlay, apiclient, "frame_result + preview")
+Rel(zoneed, apiclient, "PUT zone")
+Rel(eval, detector, "same detector")
+Rel(eval, rules, "same rules")
+Rel(eval, sm, "same state machine")
+
+SHOW_LEGEND()
+@enduml
