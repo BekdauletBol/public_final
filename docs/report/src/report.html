@@ -15,8 +15,8 @@
   p { margin: 0 0 7pt; text-align: justify; }
   ul, ol { margin: 0 0 7pt 0; padding-left: 18pt; }
   li { margin-bottom: 2pt; }
-  table { border-collapse: collapse; width: 100%; margin: 6pt 0 10pt; font-size: 9pt; page-break-inside: auto; }
-  th, td { border: 1px solid #c8d2dd; padding: 3.5pt 5pt; vertical-align: top; text-align: left; }
+  table { border-collapse: collapse; width: 100%; table-layout: fixed; margin: 6pt 0 10pt; font-size: 9pt; page-break-inside: auto; }
+  th, td { border: 1px solid #c8d2dd; padding: 3.5pt 5pt; vertical-align: top; text-align: left; overflow-wrap: anywhere; }
   th { background: #e9f0f7; font-weight: 600; }
   tr { page-break-inside: avoid; }
   thead { display: table-header-group; }
@@ -167,7 +167,7 @@
 <h3>2.2 Statistical context</h3>
 <ul>
   <li>WHO Global Status Report on Road Safety 2023: pedestrians are 23 % of road-traffic deaths worldwide [1].</li>
-  <li>Kazakhstan country profile (WHO, 2023): road-traffic deaths remain high; vulnerable road users are a significant share [2]. <span class="confirm">[optional: add national statistics from Qazstat / MVD for 2021–2025 if available]</span></li>
+  <li>Kazakhstan country profile (WHO, 2023): road-traffic deaths remain high; vulnerable road users are a significant share [2].</li>
   <li>Fixed CCTV with analytics costs an estimated $15 000–50 000 per intersection in Kazakhstan and cannot be deployed temporarily [3, 6].</li>
 </ul>
 
@@ -343,7 +343,7 @@
 
 <h3>6.1 Functional requirements</h3>
 <table>
-  <thead><tr><th style="width:9%">ID</th><th style="width:30%">Requirement</th><th style="width:4%">Pr.</th><th>Acceptance criteria</th><th style="width:16%">Verified by</th><th style="width:7%">Status</th></tr></thead>
+  <colgroup><col style="width:8%"><col style="width:27%"><col style="width:5%"><col style="width:34%"><col style="width:17%"><col style="width:10%"></colgroup><thead><tr><th>ID</th><th>Requirement</th><th>Pr.</th><th>Acceptance criteria</th><th>Verified by</th><th>Status</th></tr></thead>
   <tbody>
   <tr><td>F-ADM-1/2</td><td>Single admin account; Argon2id password hash from <code>.env</code>; server-side session cookie (HttpOnly, Secure, SameSite=Strict, 12 h idle)</td><td>M</td><td>Server refuses to start without a hash and prints the CLI command; login/logout work; password rotation invalidates all sessions</td><td>unit/test_auth, integration/test_api_auth</td><td>Done (M1)</td></tr>
   <tr><td>F-SES-1/2</td><td>Create, list, rename, archive monitoring sessions; session has 0..N cameras, camera has 0..N zones</td><td>M</td><td>CRUD endpoints return the documented shapes; archived sessions reject new phones</td><td>integration/test_api_sessions</td><td>Done (M1)</td></tr>
@@ -367,7 +367,7 @@
 
 <h3>6.2 Non-functional requirements</h3>
 <table>
-  <thead><tr><th style="width:10%">ID</th><th style="width:16%">Area</th><th>Requirement and acceptance criterion</th><th style="width:4%">Pr.</th><th style="width:18%">Verified by</th></tr></thead>
+  <colgroup><col style="width:10%"><col style="width:14%"><col style="width:54%"><col style="width:5%"><col style="width:18%"></colgroup><thead><tr><th>ID</th><th>Area</th><th>Requirement and acceptance criterion</th><th>Pr.</th><th>Verified by</th></tr></thead>
   <tbody>
   <tr><td>NF-SEC</td><td>Security</td><td>HTTPS/WSS only (mkcert locally); Argon2id; SHA-256 for tokens/PINs/session ids with salted PINs; constant-time comparison; CSRF via SameSite + X-Requested-With; CSP when FastAPI serves the SPA; no secrets in logs or repo</td><td>M</td><td>security suite; CSP header test; .env git-ignored</td></tr>
   <tr><td>NF-LAT</td><td>Latency</td><td>Server-side receive → dashboard-send p50 ≤ 150 ms and p99 ≤ 400 ms with 3 phones at 10 fps on an Apple Silicon laptop. Goal for the metrics panel; acceptance = numbers are measured and reported correctly</td><td>S</td><td>E5/E6 load test and metrics export</td></tr>
@@ -387,20 +387,22 @@
 <p>public.safe is a three-tier system on one local network: phones capture, one laptop processes, browsers observe. The diagrams below are drawn in PlantUML (C4 notation for context and component); sources are in <code>docs/diagrams/*.puml</code> and exports in <code>docs/diagrams/export/</code> so they can be edited with any PlantUML tool. Architecture decisions are recorded in nine ADRs (<code>docs/adr/</code>), listed in Section 7.6.</p>
 
 <h3>7.1 System context</h3>
-<figure><img src="img/01-system-context.png" style="width:88%"><figcaption>Figure 7.1. System context (C4 level 1). The driver-warning device is a planned external system.</figcaption></figure>
+<figure><img src="img/01-system-context.svg" style="width:88%"><figcaption>Figure 7.1. System context (C4 level 1). The driver-warning device is a planned external system.</figcaption></figure>
 
 <h3>7.2 Use cases</h3>
-<figure><img src="img/02-use-case.png" style="width:60%"><figcaption>Figure 7.2. Use case diagram: three actors, fifteen use cases grouped by area.</figcaption></figure>
+<figure><img src="img/02-use-case.svg" style="max-height:232mm;width:auto"><figcaption>Figure 7.2. Use case diagram: three actors, fifteen use cases grouped by area.</figcaption></figure>
 
+<div class="wide">
 <h3>7.3 Component diagram (draft)</h3>
-<figure><img src="img/03-component.png" style="width:100%"><figcaption>Figure 7.3. Components in the three containers (phone, laptop backend, dashboard). The evaluation CLI reuses the detector, rules and state machine unchanged, which is what makes offline results comparable with live ones.</figcaption></figure>
+<figure><img src="img/03-component.svg" style="max-height:138mm;width:auto;max-width:100%"><figcaption>Figure 7.3. Components in the three containers (phone, laptop backend, dashboard). The evaluation CLI reuses the detector, rules and state machine unchanged, which is what makes offline results comparable with live ones.</figcaption></figure>
+</div>
 <p><b>Processing path.</b> The phone encodes a JPEG and sends it over the camera WebSocket. The ingest handler puts it into that camera’s <i>LatestFrameSlot</i> without decoding; an unread older frame is replaced and counted. One inference worker thread takes frames round-robin across cameras, decodes, runs YOLOv8n (person class only), computes all six membership rules for every detection and every enabled zone, feeds the active rule’s count into the zone state machine, persists events and metric samples, and publishes a <code>frame_result</code> JSON (plus the JPEG unless privacy mode) to subscribed dashboards. The dashboard draws overlays on a canvas from that JSON. Every stage is timed (<code>timings</code> in the frame result) so latency can be attributed.</p>
 
 <h3>7.4 Data model</h3>
-<figure><img src="img/04-data-model.png" style="width:82%"><figcaption>Figure 7.4. Entity–relationship diagram (Alembic migration 0001). Tokens and PINs are stored only as hashes; event rows never contain images.</figcaption></figure>
+<figure><img src="img/04-data-model.svg" style="width:82%"><figcaption>Figure 7.4. Entity–relationship diagram (Alembic migration 0001). Tokens and PINs are stored only as hashes; event rows never contain images.</figcaption></figure>
 
 <h3>7.5 Pairing, streaming and event flow</h3>
-<figure><img src="img/05-sequence-stream.png" style="width:95%"><figcaption>Figure 7.5. Sequence from minting a PIN to a <code>zone_entered</code> event on the dashboard.</figcaption></figure>
+<figure><img src="img/05-sequence-stream.svg" style="width:95%"><figcaption>Figure 7.5. Sequence from minting a PIN to a <code>zone_entered</code> event on the dashboard.</figcaption></figure>
 
 <h3>7.6 Architecture decision records</h3>
 <table>
@@ -422,7 +424,7 @@
 <!-- ================= 8 ================= -->
 <h2 id="s8" class="pb">8. UX / prototype</h2>
 <p>The prototype is a running system, not a mock-up: milestones M0–M4 are implemented and tagged. Screenshots below were taken by the Playwright suite in Chromium against the test backend (the green picture is Chromium’s synthetic camera standing in for a phone) and from the earlier research prototype on a real iPhone at night. The repository contains run instructions (<code>README.md</code>, <code>docs/SETUP_MACOS.md</code>, <code>docs/PHONE_SETUP.md</code>).</p>
-<div class="box"><b>Prototype access.</b> Repository: <a href="https://github.com/BekdauletBol/public_final/tree/prob-period-1">github.com/BekdauletBol/public_final/tree/prob-period-1</a> · Screenshots: <code>docs/screenshots/m2…m4/</code> · Run: <code>make setup &amp;&amp; make certs &amp;&amp; make dev</code> → <code>https://localhost:5173</code>. The system runs on a local network only; a live demo is shown at the pre-defence. <span class="confirm">[optional: link to a demo video]</span></div>
+<div class="box"><b>Prototype access.</b> Repository: <a href="https://github.com/BekdauletBol/public_final/tree/prob-period-1">github.com/BekdauletBol/public_final/tree/prob-period-1</a> · Screenshots: <code>docs/screenshots/m2…m4/</code> · Run: <code>make setup &amp;&amp; make certs &amp;&amp; make dev</code> → <code>https://localhost:5173</code>. The system runs on a local network only; a live demo is shown at the pre-defence.</div>
 
 <h3>8.1 Key user scenarios</h3>
 <div class="grid2">
@@ -445,7 +447,7 @@
   <figure><img src="img/proto-night-single.png"><figcaption>One person inside the zone: alert state.</figcaption></figure>
   <figure><img src="img/proto-night-multi.png"><figcaption>Two persons counted inside the zone.</figcaption></figure>
 </div>
-<figure><img src="img/proto-dashboard-old.png" style="width:70%"><figcaption>Figure 8.1. Previous dashboard version (research prototype): analytics panel and violation alert. The current version replaced it with the React dashboard above.</figcaption></figure>
+<figure><img src="img/proto-dashboard-old.png" style="width:45%"><figcaption>Figure 8.1. Previous dashboard version (research prototype): system-health chart, objects-in-zone counter and CPU load. The current version replaced it with the React dashboard above.</figcaption></figure>
 
 <h3>8.3 API and data examples</h3>
 <p>Besides the UI, external systems interact through the REST API and the dashboard WebSocket. Example of a frame result delivered to dashboards (and written by the evaluation CLI line-by-line):</p>
@@ -517,7 +519,7 @@
 
 <h3>10.1 Repository, task tracking and workflow</h3>
 <table>
-  <tr><th style="width:26%">Git repository</th><td><a href="https://github.com/BekdauletBol/public_final">github.com/BekdauletBol/public_final</a> — public, AGPL-3.0, 28 commits from 10 Oct to 18 Oct 2026, one branch (<code>main</code>) with milestone-scoped commits, tag <code>prob-period-1</code></td></tr>
+  <tr><th style="width:26%">Git repository</th><td><a href="https://github.com/BekdauletBol/public_final">github.com/BekdauletBol/public_final</a> — public, AGPL-3.0, milestone commits from 10 Oct 2026 onwards, one branch (<code>main</code>) with milestone-scoped commits, tag <code>prob-period-1</code></td></tr>
   <tr><th>Task tracking</th><td>GitHub Projects board “public.safe — diploma” (used instead of YouTrack, as the form allows another tool): <a href="https://github.com/users/BekdauletBol/projects/1">github.com/users/BekdauletBol/projects/1</a>. 20 issues (#1–#15, #17–#21) with assignee, priority, due date, expected outcome, acceptance criteria and links to the implementing commits; 16 Done, 1 In progress, 3 Todo. Board screenshots are submitted separately (<code>Bolatov_TaskBoard.pdf</code>).</td></tr>
   <tr><th>Traceability</th><td>Each issue lists the commit hashes that implement it (e.g. #10 → 8ec5122, 462c338, 62caa94); commit messages carry the milestone prefix (M0…M4). For an individual project, supervisor review of significant changes happens at the probation checkpoints.</td></tr>
   <tr><th>Repository structure</th><td><code>backend/publicsafe/</code> (api, ws, core, worker, db, eval), <code>backend/tests/</code> (unit, integration, security, cv, load), <code>frontend/src/</code> (pages, components, lib), <code>frontend/e2e/</code>, <code>docs/</code> (setup, operations, phone setup, evaluation, adr/, screenshots/, diagrams/, report/), <code>Makefile</code>, <code>docker-compose.yml</code>, <code>.env.example</code>, <code>.gitignore</code></td></tr>
@@ -573,12 +575,12 @@
 
 <h3>11.1 Feedback on key deliverables and resulting decisions</h3>
 <table>
-  <thead><tr><th style="width:28%">Deliverable</th><th>Supervisor’s comment</th><th>Decision / action taken</th><th style="width:12%">Status</th></tr></thead>
+  <colgroup><col style="width:22%"><col style="width:30%"><col style="width:36%"><col style="width:12%"></colgroup><thead><tr><th>Deliverable</th><th>Supervisor’s comment</th><th>Decision / action taken</th><th>Status</th></tr></thead>
   <tbody>
   <tr><td>Research work: problem analysis and related work</td><td>Limitations of centralised CCTV and the need for a distributed edge architecture are well argued (review, para. 2)</td><td>Kept as the basis of Sections 1, 3 and 4 of this report; comparison extended from 4 approaches to 6 named systems and 8 criteria</td><td>Done</td></tr>
   <tr><td>Research work: experimental design and metrics</td><td>Measurements of detection accuracy, latency and comparison with baselines are appropriate (review, para. 3)</td><td>Experiments re-registered with explicit success criteria (Section 9.4); evaluation moved from the lab-only data set to public datasets (MOT17, WILDTRACK) with bootstrap CIs and McNemar, because the lab ablation was found to be inconsistent with the stated rule</td><td>In progress (M5)</td></tr>
   <tr><td>Research work: engineering decisions</td><td>Independent choice of computing architecture, spatial-verification algorithm and real-time stream handling is noted (review, para. 4)</td><td>Every such decision now recorded as an ADR with alternatives (Section 7.6); single shared queue replaced by per-camera mailbox (ADR 0006)</td><td>Done</td></tr>
-  <tr><td>Probation-period materials (this report, repository, board)</td><td>Review at the probation checkpoint after submission</td><td>Comments will be recorded in <code>docs/SUPERVISOR_FEEDBACK.md</code> and linked from the board</td><td>Pending</td></tr>
+  <tr><td>Probation-period materials (this report, repository, board)</td><td>Review at the probation checkpoint after submission</td><td>Comments will be recorded as issues on the task board and addressed before pre-defence 2</td><td>Pending</td></tr>
   </tbody>
 </table>
 
@@ -619,8 +621,8 @@
   <tr><td>Automated tests</td><td><code>backend/tests/</code>, <code>frontend/e2e/</code></td></tr>
   <tr><td>Task board</td><td><a href="https://github.com/users/BekdauletBol/projects/1">github.com/users/BekdauletBol/projects/1</a>; screenshots in <code>Bolatov_TaskBoard.pdf</code></td></tr>
   <tr><td>Milestone commits</td><td>M0 <a href="https://github.com/BekdauletBol/public_final/commit/794e7333c7ec">794e733</a> · M1 <a href="https://github.com/BekdauletBol/public_final/commit/48573c484697">48573c4</a> · M2 <a href="https://github.com/BekdauletBol/public_final/commit/58fcc5e2d1ee">58fcc5e</a> · M3 <a href="https://github.com/BekdauletBol/public_final/commit/7211409f5c58">7211409</a> · M4 <a href="https://github.com/BekdauletBol/public_final/commit/8ec512222d3e">8ec5122</a> · history <a href="https://github.com/BekdauletBol/public_final/commits/prob-period-1">commits/prob-period-1</a></td></tr>
-  <tr><td>Research work (predecessor)</td><td>“Edge-distributed pedestrian monitoring system using YOLOv8 and geometric spatial analysis for real-time urban danger zone detection”, AITU, 2026 <span class="confirm">[optional: add link]</span></td></tr>
-  <tr><td>Survey (Google Forms)</td><td>Response summary screenshots below; <span class="confirm">[optional: add form link]</span></td></tr>
+  <tr><td>Research work (predecessor)</td><td>“Edge-distributed pedestrian monitoring system using YOLOv8 and geometric spatial analysis for real-time urban danger zone detection”, AITU, 2026</td></tr>
+  <tr><td>Survey (Google Forms)</td><td>Response summary screenshots below (36 responses, October 2026)</td></tr>
   </tbody>
 </table>
 <div class="grid2">
