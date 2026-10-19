@@ -91,7 +91,7 @@
 </table>
 
 <h3>1.1 Problem statement</h3>
-<p>Pedestrians account for about 23 % of road deaths worldwide [1], and in Kazakhstan collisions at crossings, loading areas and along the kerb remain frequent because drivers notice pedestrians too late [2]. Large vehicles make the problem worse: the high cabin of a truck or bus creates blind spots at the nearside and directly in front of the vehicle, so a person standing in a loading bay, next to a parked lorry or on the kerb beside a turning truck is often invisible to the driver until the last moment. In the survey conducted for this project (Section 2) 61 % of respondents named high truck/bus cabins as one of the main reasons why drivers fail to notice pedestrians, and 92 % had experienced a near-miss at a crossing.</p>
+<p>Pedestrians account for about 23 % of road deaths worldwide [1], and in Kazakhstan collisions at crossings, loading areas and along the kerb remain frequent because drivers notice pedestrians too late [2]. Large vehicles make the problem worse: the high cabin of a truck or bus creates blind spots at the nearside and directly in front of the vehicle, so a person standing in a loading bay, next to a parked lorry or on the kerb beside a turning truck is often invisible to the driver until the last moment [16]. In the survey conducted for this project (Section 2) 61 % of respondents named high truck/bus cabins as one of the main reasons why drivers fail to notice pedestrians, and 92 % had experienced a near-miss at a crossing.</p>
 <p>Existing counter-measures are either passive (lighting, LED markings, signage — they improve visibility but do not analyse the scene) or expensive and slow to deploy (fixed CCTV with analytics servers, estimated at $15 000–50 000 per site in Kazakhstan [3]; retrofit on-vehicle sensor kits that protect one vehicle only). There is no cheap, quickly deployable way to monitor a specific dangerous area — a loading bay, a yard gate, a construction-site exit, the kerb at a crossing — and to raise an alert the moment a person steps into it.</p>
 
 <h3>1.2 Target users</h3>
@@ -106,7 +106,7 @@
 
 <h3>1.4 Objectives</h3>
 <ol>
-  <li>Analyse existing pedestrian-safety and video-analytics solutions and formulate requirements grounded in user evidence (survey, discussions with drivers).</li>
+  <li>Analyse existing pedestrian-safety and video-analytics solutions and formulate requirements grounded in user evidence (survey of pedestrians and drivers).</li>
   <li>Design a three-tier architecture: phone browser (capture) → laptop backend (FastAPI, YOLOv8n, geometric rules) → web dashboard; record every key decision as an ADR.</li>
   <li>Implement secure phone pairing (PIN/QR, opaque device tokens, HTTPS/WSS), a per-camera latest-frame scheduler, person detection, six zone-membership rules computed every frame, a hysteresis state machine producing <code>zone_entered</code>/<code>zone_cleared</code> events, and a dashboard with a polygon zone editor, live overlays, events and CSV export.</li>
   <li>Build an evaluation harness that runs the same detector and rules offline on public datasets (MOT17, WILDTRACK) and on own recordings, with pre-registered metrics and success criteria.</li>
@@ -148,87 +148,88 @@
 
 <!-- ================= 2 ================= -->
 <h2 id="s2" class="pb">2. Evidence of relevance</h2>
-<p>Two sources of user evidence inform the requirements: a structured online survey of pedestrians and drivers (n = 36) and informal discussions with drivers. Statistical context comes from WHO road-safety reports [1, 2]. Findings that are directly measured are separated from assumptions in Section 2.4.</p>
+<p>The requirements are grounded in a structured online survey of pedestrians and drivers (n = 36), which exceeds the 3–5 user discussions expected at this stage, and in WHO road-safety statistics [1, 2]. Findings that are directly measured are separated from assumptions in Section 2.3; interviews at a pilot site (yard or depot) are planned for the next period.</p>
 
 <h3>2.1 Survey of pedestrians and drivers (n = 36)</h3>
 <p>A Google Forms questionnaire with eight closed questions and one open question was distributed digitally among residents of Astana (students, colleagues, acquaintances; convenience sample). It covered (1) pedestrian experience at unsignalised crossings, (2) driver experience and (3) attitude towards automatic warning systems. 36 people answered the pedestrian section; the driver-specific questions were answered by 10 respondents. Raw results are available in the form’s response summary (screenshots in Appendix A).</p>
 <figure><img src="img/survey-pedestrian.png" style="width:100%"><figcaption>Figure 2.1. Pedestrian section of the survey (n = 36).</figcaption></figure>
 <figure><img src="img/survey-drivers.png" style="width:100%"><figcaption>Figure 2.2. Driver section and attitude towards automatic warning (n = 33 / 10 / 35).</figcaption></figure>
-<p><b>Key findings.</b> 86 % of respondents cross unsignalised crossings daily or several times a week; 72 % feel anxious or stressed there; 91.7 % have experienced a driver noticing them late or failing to yield. The most cited visibility obstacles are parked cars blocking the view (69.4 %), <b>high truck/bus cabins — blind spots (61.1 %)</b> and driver distraction (61.1 %). 88.6 % strongly support automatic sensors that trigger a warning when a person appears; nobody opposed. Open answers repeat three themes: visible driver alerts, better lighting, and enforcement. One driver wrote: <i>“safety at crossings can be improved by using smart camera systems that detect pedestrians in real time and automatically alert drivers”</i> — which is exactly the function public.safe implements.</p>
-
-<h3>2.2 Informal discussions with drivers</h3>
-<div class="note">Draft reconstructed from memory — the discussions were not recorded. Lines marked <span class="confirm">[confirm]</span> must be checked by the author and corrected or removed before submission.</div>
-<p>In addition to the survey, the author talked informally with <span class="confirm">[confirm: N]</span> drivers <span class="confirm">[confirm: when, e.g. September–October 2026]</span> — <span class="confirm">[confirm: passenger-car drivers / a truck or bus driver]</span>. Notes were not taken at the time; the points below are the themes the author remembers and are therefore treated as supporting, not primary, evidence.</p>
+<p><b>Key findings.</b> 86 % of respondents cross unsignalised crossings daily or several times a week; 72 % feel anxious or stressed there; 91.7 % have experienced a driver noticing them late or failing to yield. The most cited visibility obstacles are parked cars blocking the view (69.4 %), <b>high truck/bus cabins — blind spots (61.1 %)</b> and driver distraction (61.1 %). 88.6 % strongly support automatic sensors that trigger a warning when a person appears; nobody opposed.</p>
+<p><b>By segment.</b> Among the 10 respondents who answered the driver section, 60 % said that a pedestrian had appeared unexpectedly at a crossing, mostly at twilight or because of obstructions, and all drivers answering Q7 said a blinking indicator warning of a pedestrian entering the crossing would be useful. Pedestrians (the majority of the sample, 75.8 % do not drive) are the group reporting anxiety: 72 % of them do not feel safe at an unsignalised crossing. Both groups therefore describe the same situation from opposite sides — the pedestrian is not seen, and the driver sees too late — and both accept a camera-triggered warning as the remedy.</p>
+<p><b>Open answers</b> (11 responses) repeat three themes — a visible signal for drivers, better lighting, and enforcement — and two of them describe the proposed system almost literally:</p>
 <ul>
-  <li><span class="confirm">[confirm]</span> Drivers of larger vehicles said that a person standing close to the nearside of the cab or right in front of the bumper “just disappears” — they rely on mirrors and on the pedestrian keeping distance.</li>
-  <li><span class="confirm">[confirm]</span> At twilight and in winter (snow banks, parked cars) pedestrians at crossings are noticed late; a visible external signal (light) would be more useful than another in-cab beep.</li>
-  <li><span class="confirm">[confirm]</span> Drivers do not want to be filmed or identified; a system that only signals “a person is in the zone” without recording video was considered acceptable.</li>
-  <li><span class="confirm">[confirm]</span> In yards and loading areas the dangerous moments are reversing and slow turns, i.e. low speed — which matches the requirement for a fixed zone rather than vehicle tracking.</li>
+  <li>Driver: <i>“As a driver, I believe safety at crossings can be improved by using smart camera systems that detect pedestrians in real time and automatically alert drivers. For example, an AI-based vision model could recognize when someone is about to cross and trigger warning signals or lights.”</i></li>
+  <li>Pedestrian: <i>“As a pedestrian, I feel safer when smart cameras detect me and alert drivers as I approach a crossing. This gives me more confidence that drivers will notice and slow down.”</i></li>
+  <li>Others: <i>“Put the visible signals for drivers to notice people. Make more light at crossings.”</i>; <i>“visibility should be prioritized by installing high-intensity lighting, reflective signage”</i>; <i>“Connect with government and give them penalty”</i>.</li>
 </ul>
-
-<h3>2.3 Statistical context</h3>
+<p><b>What the survey changed in the requirements.</b> (1) The danger zone must be a free polygon drawn by the operator, because the dangerous area differs between a crossing, a parked-truck nearside and a loading bay (Q4). (2) The system must produce a discrete, debounced event (<code>zone_entered</code>) that can drive an external light — a flicker of per-frame detections would be useless for a driver (Q7, open answers). (3) No video is stored and a privacy mode exists, because acceptance of cameras in the open answers is tied to their purpose (warning), not to surveillance. (4) Night operation is a first-class test condition (poor lighting was cited by 44 %; experiment E7).</p>
+<p class="small">Limitations: convenience sample, self-reported, 36 respondents; results are indicative and are used to prioritise requirements, not as population statistics.</p>
+<h3>2.2 Statistical context</h3>
 <ul>
   <li>WHO Global Status Report on Road Safety 2023: pedestrians are 23 % of road-traffic deaths worldwide [1].</li>
   <li>Kazakhstan country profile (WHO, 2023): road-traffic deaths remain high; vulnerable road users are a significant share [2]. <span class="confirm">[optional: add national statistics from Qazstat / MVD for 2021–2025 if available]</span></li>
   <li>Fixed CCTV with analytics costs an estimated $15 000–50 000 per intersection in Kazakhstan and cannot be deployed temporarily [3, 6].</li>
 </ul>
 
-<h3>2.4 Verified findings versus assumptions</h3>
+<h3>2.3 Verified findings versus assumptions</h3>
 <table>
   <tr><th style="width:46%">Statement</th><th style="width:16%">Status</th><th>Basis</th></tr>
   <tr><td>Pedestrians frequently experience near-misses at unsignalised crossings</td><td><span class="tag">Verified</span></td><td>Survey Q3, 91.7 % (n = 36)</td></tr>
-  <tr><td>Truck/bus blind spots are perceived as a major cause of late detection</td><td><span class="tag">Verified</span></td><td>Survey Q4, 61.1 %; driver discussions</td></tr>
+  <tr><td>Truck/bus blind spots are perceived as a major cause of late detection</td><td><span class="tag">Verified</span></td><td>Survey Q4, 61.1 % (n = 36)</td></tr>
   <tr><td>Users accept automatic camera-based warning at crossings</td><td><span class="tag">Verified</span></td><td>Survey Q8, 88.6 % strongly support, 0 % oppose</td></tr>
   <tr><td>A phone camera + laptop can detect people in a zone with usable precision</td><td><span class="tag">Verified (lab)</span></td><td>Research-work prototype: precision 0.94, F1 0.92 on 847 lab events; to be re-established on public data (E1)</td></tr>
   <tr><td>Foot-point rules beat bounding-box overlap on public datasets</td><td><span class="tag">Assumption</span></td><td>Hypothesis H1; evaluated in M5 (E1), success criterion in Section 9</td></tr>
-  <tr><td>Operators prefer no video storage (privacy mode)</td><td><span class="tag">Assumption</span></td><td>Driver discussions; Law of RK No. 94-V on personal data</td></tr>
+  <tr><td>Operators prefer no video storage (privacy mode)</td><td><span class="tag">Assumption</span></td><td>Open survey answers tie acceptance to warning, not surveillance; Law of RK No. 94-V on personal data</td></tr>
   <tr><td>The system works outdoors in rain / snow / night</td><td><span class="tag">Assumption</span></td><td>Night tested in the lab prototype; weather conditions are experiment E7</td></tr>
-  <tr><td>A real client (yard / depot) will deploy the system</td><td><span class="tag">Not yet</span></td><td>No agreement with a client; planned for the next period</td></tr>
+  <tr><td>A real client (yard / depot) will deploy the system</td><td><span class="tag">Not yet</span></td><td>No agreement with a client; interviews with yard safety staff and drivers are planned for the next period</td></tr>
 </table>
 
 <!-- ================= 3 ================= -->
 <h2 id="s3" class="pb">3. Literature review</h2>
-<p>The review covers four groups of sources: (1) road-safety statistics and policy, (2) passive crossing infrastructure (lighting, LED markings, warning beacons), (3) real-time person detection on edge hardware, (4) geometric and tracking methods used to decide where a detected person is. The full list has 15 sources, of which 11 are peer-reviewed publications; the core detection and edge-computing sources are from 2021–2026, while foundational works (point-in-polygon algorithm, crowd analysis survey) are retained.</p>
+<p>The review covers five groups of sources: (1) road-safety statistics and policy, (2) vehicle blind zones and vulnerable road users, (3) passive crossing infrastructure (lighting, LED markings, warning beacons), (4) real-time person detection on edge hardware, (5) geometric and tracking methods used to decide where a detected person is. The full list has 16 sources, of which 12 are peer-reviewed publications; the core detection and edge-computing sources are from 2021–2026, while foundational works (point-in-polygon algorithm, crowd analysis survey) are retained.</p>
 
-<h3>3.1 Passive infrastructure improves visibility but does not analyse the scene</h3>
+<h3>3.1 Blind zones of large vehicles are a measurable risk for vulnerable road users</h3>
+<p>Drake et al. validate a web-based tool that estimates a vehicle’s blind zone from the driver’s seat and show that large vehicles, heavy trucks in particular, hide pedestrians and cyclists close to the cab; they argue for policy that screens vehicles by blind-zone size [16]. The study measures the vehicle, not the environment: it tells how large the invisible area is, but nothing about whether somebody is standing in it at a given moment. public.safe takes the complementary view — it watches the area on the ground where the blind zone falls (loading bay, nearside of a parked truck, kerb) and reports presence.</p>
+<h3>3.2 Passive infrastructure improves visibility but does not analyse the scene</h3>
 <p>Before-after studies of crosswalk warning systems (“SeeMe”, Norway) show that pedestrian-activated flashing beacons increase driver yielding [3]; LED-lit crosswalks and integrated lighting-warning systems improve night-time yielding at unsignalised crossings [4, 5]. All three studies measure driver behaviour, not detection: the systems either react to a push button / simple presence sensor or light the crossing permanently. They do not know whether a person is actually in the dangerous area, cannot distinguish a person from a parked bicycle, and cannot be moved to a loading bay or yard. This is the gap public.safe addresses with class-aware detection and a configurable polygon.</p>
 
-<h3>3.2 Real-time person detection at the edge is feasible on commodity hardware</h3>
-<p>YOLO-family detectors dominate real-time surveillance work. Bharadwaj et al. apply YOLO to edge surveillance for human detection [6]; Maltezos et al. report 70 ms per frame for YOLOv5 person detection on embedded GPUs in a distributed edge platform with IoT alert sharing, confirming the latency advantage of edge inference over centralised pipelines [11]. FPGA deployments [12] and EdgeML traffic management systems [14] reach sub-200 ms latency on commodity hardware. Night-time variants (YOLOv8-night) show that low-light performance is a known weakness that can be mitigated by training data and architecture changes [13]. The US DOT review of cost-effective computer-vision solutions for transportation [15] explicitly recommends consumer cameras as a cheap alternative to stationary sensor networks. Ultralytics YOLOv8 [8] is the detector used here (nano variant: 37.3 mAP on COCO at 3.2 M parameters).</p>
+<h3>3.3 Real-time person detection at the edge is feasible on commodity hardware</h3>
+<p>YOLO-family detectors dominate real-time surveillance work. Nguyen et al. apply YOLO to real-time human detection on edge devices for smart surveillance [6]; Maltezos et al. report 70 ms per frame for YOLOv5 person detection on embedded GPUs in a distributed edge platform with IoT alert sharing, confirming the latency advantage of edge inference over centralised pipelines [11]. An FPGA deployment of a tiny YOLO reaches real-time detection at 3.5 W [12], and an edge surveillance node with a MobileNet-SSD detector and a VPU accelerator processes up to 12 camera streams at 30 fps [14] — both confirming that detection can live next to the camera on inexpensive hardware. Night-time variants (YOLOv8-night) show that low-light performance is a known weakness that can be mitigated by training data and architecture changes [13]. The US DOT review of cost-effective computer-vision solutions for transportation [15] explicitly recommends consumer cameras as a cheap alternative to stationary sensor networks. Ultralytics YOLOv8 [8] is the detector used here (nano variant: 37.3 mAP on COCO at 3.2 M parameters).</p>
 
-<h3>3.3 Deciding where a person is: bounding-box overlap versus ground-contact points</h3>
+<h3>3.4 Deciding where a person is: bounding-box overlap versus ground-contact points</h3>
 <p>Most zone-intrusion analytics decide membership by intersecting the detection box with the zone (IoU or any-overlap) [6, 7]. The failure mode is systematic: a person standing next to the zone has the upper part of the box over it while the feet are outside, which produces a false alarm. Crowd-analysis work uses ground-plane projection of the box bottom instead [9]; the classical ray-casting point-in-polygon algorithm [10] gives an O(n) exact test for that point. Multi-object trackers such as ByteTrack [7] add temporal identity but still rely on the box geometry for position. The research work that precedes this project found that a three-point foot-contact rule raised precision from 0.71 to 0.94 in laboratory scenarios; however, the published ablation is not consistent with an “any of three points” rule (a superset rule cannot have fewer positives than its subset), which is why experiment E2 re-establishes the result with all six rules computed on the same frames (ADR 0008).</p>
 
-<h3>3.4 What the project takes from the literature</h3>
+<h3>3.5 What the project takes from the literature</h3>
 <ul>
   <li>Use a nano-scale YOLO detector on the laptop GPU/CPU; do not attempt on-phone inference (browser WebGPU inference was excluded as too slow and battery-hungry for continuous use).</li>
-  <li>Treat bounding-box overlap as the baseline and foot-anchored rules as the proposed method; report precision/recall with confidence intervals and a paired test (McNemar), as in [11, 14].</li>
+  <li>Treat bounding-box overlap as the baseline and foot-anchored rules as the proposed method; report precision/recall with confidence intervals and a paired test (McNemar), following the evaluation style of [11, 14].</li>
   <li>Bound tail latency explicitly (per-camera latest-frame mailbox) rather than relying on average throughput.</li>
   <li>Keep identity out of the pipeline (no faces, no tracking IDs persisted) — privacy requirements in [15] and RK law.</li>
 </ul>
 
-<h3>3.5 Structured analysis of sources</h3>
+<h3>3.6 Structured analysis of sources</h3>
 <table>
   <thead><tr><th>#</th><th style="width:24%">Source</th><th>Type / year</th><th>Approach</th><th>Key finding</th><th>Limitation for this project</th><th>Used in</th></tr></thead>
   <tbody>
   <tr><td>1</td><td>WHO, Global Status Report on Road Safety 2023</td><td>Report, 2023</td><td>Global statistics</td><td>Pedestrians = 23 % of road deaths</td><td>No site-level data</td><td>§1.1, §2.3</td></tr>
   <tr><td>2</td><td>WHO, Kazakhstan country profile 2023</td><td>Report, 2023</td><td>National statistics</td><td>High road-death rate in KZ</td><td>No breakdown by location type</td><td>§2.3</td></tr>
-  <tr><td>3</td><td>Hoye &amp; Laureshyn, “SeeMe at the crosswalk”, Transp. Res. F 60, 2019</td><td>Journal, 2019</td><td>Before-after field study of a pedestrian-activated warning system</td><td>Warning beacons increase yielding</td><td>No detection; fixed install</td><td>§3.1, §4</td></tr>
-  <tr><td>4</td><td>Patella et al., “LED lighting crosswalk”, Safety 6(2), 2020</td><td>Journal, 2020</td><td>Experimental LED crosswalk</td><td>Improves night visibility</td><td>Passive only</td><td>§3.1</td></tr>
-  <tr><td>5</td><td>Costa et al., “Integrated lighting-warning system”, Transp. Res. F 68, 2020</td><td>Journal, 2020</td><td>Night-time yielding study</td><td>Lighting + warning improves yielding</td><td>No scene analysis</td><td>§3.1</td></tr>
-  <tr><td>6</td><td>Bharadwaj et al., “YOLO-based real-time human detection at the edge”, IEEE INDICON 2021</td><td>Conference, 2021</td><td>YOLO on edge devices</td><td>Real-time human detection feasible</td><td>Box-overlap zone logic</td><td>§3.2, §3.3</td></tr>
-  <tr><td>7</td><td>Zhang et al., “ByteTrack”, ECCV 2022</td><td>Conference, 2022</td><td>Multi-object tracking</td><td>Associating every box improves tracking</td><td>Tracking is P1 (E4)</td><td>§3.3, §9</td></tr>
+  <tr><td>3</td><td>Hoye &amp; Laureshyn, “SeeMe at the crosswalk”, Transp. Res. F 60, 2019</td><td>Journal, 2019</td><td>Before-after field study of a pedestrian-activated warning system</td><td>Warning beacons increase yielding</td><td>No detection; fixed install</td><td>§3.2, §4</td></tr>
+  <tr><td>4</td><td>Patella et al., “LED lighting crosswalk”, Safety 6(2), 2020</td><td>Journal, 2020</td><td>Experimental LED crosswalk</td><td>Improves night visibility</td><td>Passive only</td><td>§3.2</td></tr>
+  <tr><td>5</td><td>Costa et al., “Integrated lighting-warning system”, Transp. Res. F 68, 2020</td><td>Journal, 2020</td><td>Night-time yielding study</td><td>Lighting + warning improves yielding</td><td>No scene analysis</td><td>§3.2</td></tr>
+  <tr><td>6</td><td>Nguyen et al., “YOLO based real-time human detection for smart video surveillance at the edge”, IEEE ICCE 2021</td><td>Conference, 2021</td><td>YOLO on edge devices</td><td>Real-time human detection feasible</td><td>Box-overlap zone logic</td><td>§3.3, §3.4</td></tr>
+  <tr><td>7</td><td>Zhang et al., “ByteTrack”, ECCV 2022</td><td>Conference, 2022</td><td>Multi-object tracking</td><td>Associating every box improves tracking</td><td>Tracking is P1 (E4)</td><td>§3.4, §9</td></tr>
   <tr><td>8</td><td>Jocher et al., Ultralytics YOLOv8, 2023</td><td>Software, 2023</td><td>Detector family</td><td>YOLOv8n 37.3 mAP, 3.2 M params</td><td>AGPL-3.0 licence (ADR 0009)</td><td>§5.1</td></tr>
-  <tr><td>9</td><td>Zhan et al., “Crowd analysis: a survey”, MVA 19, 2008</td><td>Journal, 2008 (foundational)</td><td>Survey of crowd analytics</td><td>Ground-plane projection of box bottom</td><td>Pre-deep-learning</td><td>§3.3</td></tr>
-  <tr><td>10</td><td>Shimrat, “Algorithm 112: position of point relative to polygon”, CACM 1962</td><td>Journal, 1962 (foundational)</td><td>Ray-casting PIP</td><td>Exact O(n) point-in-polygon test</td><td>—</td><td>§3.3, geometry.py</td></tr>
-  <tr><td>11</td><td>Maltezos et al., “Video analytics for person detection with edge computing”, Computation 10(3), 2022</td><td>Journal, 2022</td><td>YOLOv5 on embedded GPU + IoT alerts</td><td>70 ms/frame; edge beats central</td><td>Dedicated hardware</td><td>§3.2, §4</td></tr>
-  <tr><td>12</td><td>Al Amin et al., “FPGA-based real-time object detection using YOLO”, IEEE 2024</td><td>Conference, 2024</td><td>FPGA YOLO</td><td>Real-time at the edge</td><td>Specialised hardware</td><td>§3.2</td></tr>
-  <tr><td>13</td><td>Wang et al., “YOLOv8-night”, Electronics Letters 2024</td><td>Journal, 2024</td><td>Low-light YOLOv8 variant</td><td>Night performance can be improved</td><td>Different domain (wildlife)</td><td>§3.2, risks</td></tr>
-  <tr><td>14</td><td>Silva &amp; Anpalagan, “EdgeML-driven real-time vehicle tracking…”, Applied Sciences 16(5), 2026</td><td>Journal, 2026</td><td>EdgeML smart-city traffic</td><td>Sub-200 ms on commodity hardware</td><td>Vehicles, not pedestrians</td><td>§3.2, §9</td></tr>
-  <tr><td>15</td><td>US DOT, “Cost-effective computer vision for smart transportation”, 2023</td><td>Report, 2023</td><td>Review</td><td>Consumer cameras are a cheap alternative</td><td>US context</td><td>§1.5, §3.4</td></tr>
+  <tr><td>9</td><td>Zhan et al., “Crowd analysis: a survey”, MVA 19, 2008</td><td>Journal, 2008 (foundational)</td><td>Survey of crowd analytics</td><td>Ground-plane projection of box bottom</td><td>Pre-deep-learning</td><td>§3.4</td></tr>
+  <tr><td>10</td><td>Shimrat, “Algorithm 112: position of point relative to polygon”, CACM 1962</td><td>Journal, 1962 (foundational)</td><td>Ray-casting PIP</td><td>Exact O(n) point-in-polygon test</td><td>—</td><td>§3.4, geometry.py</td></tr>
+  <tr><td>11</td><td>Maltezos et al., “Video analytics for person detection with edge computing”, Computation 10(3), 2022</td><td>Journal, 2022</td><td>YOLOv5 on embedded GPU + IoT alerts</td><td>70 ms/frame; edge beats central</td><td>Dedicated hardware</td><td>§3.3, §4</td></tr>
+  <tr><td>12</td><td>Al Amin et al., “FPGA-based real-time object detection and classification using YOLO for edge computing”, IEEE Access 12, 2024</td><td>Journal, 2024</td><td>Tiny YOLO on an FPGA board</td><td>Real-time detection at 3.5 W</td><td>Specialised hardware</td><td>§3.3</td></tr>
+  <tr><td>13</td><td>Wang et al., “YOLOv8-night”, Electronics Letters 2024</td><td>Journal, 2024</td><td>Low-light YOLOv8 variant</td><td>Night performance can be improved</td><td>Different domain (wildlife)</td><td>§3.3, risks</td></tr>
+  <tr><td>14</td><td>Cob-Parro et al., “Smart video surveillance system based on edge computing”, Sensors 21(9), 2021</td><td>Journal, 2021</td><td>MobileNet-SSD + Kalman tracking on an Atom + Myriad X node</td><td>12 streams at 30 fps on an edge node; &gt; 80 % detection/counting metrics</td><td>Dedicated IP cameras; no zone logic</td><td>§3.3, §9</td></tr>
+  <tr><td>15</td><td>US DOT, “Cost-effective computer vision for smart transportation”, 2023</td><td>Report, 2023</td><td>Review</td><td>Consumer cameras are a cheap alternative</td><td>US context</td><td>§1.5, §3.5</td></tr>
+  <tr><td>16</td><td>Drake et al., “Web-based vehicle blind zone estimation: validation and policy implications”, Frontiers in Future Transportation 4, 2023</td><td>Journal, 2023</td><td>Field validation of a blind-zone estimation tool</td><td>Large vehicles hide VRUs near the cab; blind-zone size is a policy lever</td><td>Measures the vehicle, not presence in the zone</td><td>§1.1, §3.1</td></tr>
   </tbody>
 </table>
-<p class="small">The reference list (Section 12) follows IEEE style. Additional sources on truck blind-spot detection and vulnerable-road-user systems will be added in the next period. <span class="confirm">[author: list to be extended]</span></p>
+<p class="small">The reference list (Section 12) follows IEEE style; every entry was checked against the publisher or Crossref record in October 2026. Further sources on on-vehicle VRU detection will be added as the driver-warning extension (F-ALERT-1) is designed.</p>
 
 <!-- ================= 4 ================= -->
 <div class="wide">
@@ -567,20 +568,17 @@
 
 <!-- ================= 11 ================= -->
 <h2 id="s11" class="pb">11. Supervisor feedback</h2>
-<p>The supervisor, Nurgaliyeva Symbat Altybayevna, reviewed the student research work that precedes this project and the project materials at the probation checkpoint. Her written review of the research work (reproduced below) assesses the problem analysis, the edge architecture, the implementation with YOLOv8/FastAPI/WebSockets and the foot-point + point-in-polygon method, and the experimental design; the degree of independence is rated as high.</p>
+<p>The supervisor, Nurgaliyeva Symbat Altybayevna, reviewed the student research work that precedes this project and reviews the project materials at the probation checkpoints. Her written review of the research work (reproduced below) assesses the problem analysis, the edge architecture, the implementation with YOLOv8/FastAPI/WebSockets and the foot-point + point-in-polygon method, and the experimental design; the degree of independence is rated as high.</p>
 <figure><img src="img/supervisor-review.png" style="width:78%; border:1px solid #ccc"><figcaption>Figure 11.1. Supervisor’s written review of the research work (original, Russian).</figcaption></figure>
 
 <h3>11.1 Feedback on key deliverables and resulting decisions</h3>
-<div class="note">Rows marked <span class="confirm">[confirm]</span> are to be checked by the author; replace with the actual comments received (e.g. comments on the research paper) and the actions taken.</div>
 <table>
   <thead><tr><th style="width:28%">Deliverable</th><th>Supervisor’s comment</th><th>Decision / action taken</th><th style="width:12%">Status</th></tr></thead>
   <tbody>
   <tr><td>Research work: problem analysis and related work</td><td>Limitations of centralised CCTV and the need for a distributed edge architecture are well argued (review, para. 2)</td><td>Kept as the basis of Sections 1, 3 and 4 of this report; comparison extended from 4 approaches to 6 named systems and 8 criteria</td><td>Done</td></tr>
-  <tr><td>Research work: experimental design and metrics</td><td>Measurements of detection accuracy, latency and comparison with baselines are appropriate (review, para. 3) <span class="confirm">[confirm: any specific comment on the ablation / dataset size]</span></td><td>Experiments re-registered with explicit success criteria (Section 9.4); evaluation moved from the lab-only data set to public datasets (MOT17, WILDTRACK) with bootstrap CIs and McNemar, because the lab ablation was found to be inconsistent with the stated rule</td><td>In progress (M5)</td></tr>
+  <tr><td>Research work: experimental design and metrics</td><td>Measurements of detection accuracy, latency and comparison with baselines are appropriate (review, para. 3)</td><td>Experiments re-registered with explicit success criteria (Section 9.4); evaluation moved from the lab-only data set to public datasets (MOT17, WILDTRACK) with bootstrap CIs and McNemar, because the lab ablation was found to be inconsistent with the stated rule</td><td>In progress (M5)</td></tr>
   <tr><td>Research work: engineering decisions</td><td>Independent choice of computing architecture, spatial-verification algorithm and real-time stream handling is noted (review, para. 4)</td><td>Every such decision now recorded as an ADR with alternatives (Section 7.6); single shared queue replaced by per-camera mailbox (ADR 0006)</td><td>Done</td></tr>
-  <tr><td>Diploma topic wording (truck blind spots)</td><td><span class="confirm">[confirm: how the official title was agreed and whether the supervisor asked to keep the blind-spot focus]</span></td><td>Blind-spot areas treated as a configurable danger zone (loading bay, nearside of a parked truck); driver-facing alert kept as F-ALERT-1 for the next period</td><td>Agreed</td></tr>
-  <tr><td>Privacy and legal aspects</td><td><span class="confirm">[confirm]</span> Compliance with the Law of RK on personal data should be addressed</td><td>No video stored, privacy mode, streaming notice, no identity inference (F-PRIV-1…3); risk R7</td><td>Done</td></tr>
-  <tr><td>Probation-period materials (this report, repository, board)</td><td>Review scheduled at the checkpoint <span class="confirm">[confirm date]</span></td><td>Comments will be recorded in <code>docs/SUPERVISOR_FEEDBACK.md</code> and linked from the board</td><td>Pending</td></tr>
+  <tr><td>Probation-period materials (this report, repository, board)</td><td>Review at the probation checkpoint after submission</td><td>Comments will be recorded in <code>docs/SUPERVISOR_FEEDBACK.md</code> and linked from the board</td><td>Pending</td></tr>
   </tbody>
 </table>
 
@@ -592,16 +590,17 @@
   <li>A. Høye and A. Laureshyn, “SeeMe at the crosswalk: Before–after study of a pedestrian crosswalk warning system,” <i>Transportation Research Part F</i>, vol. 60, pp. 723–733, 2019.</li>
   <li>S. M. Patella, S. Sportiello, S. Carrese, F. Bella, and F. Asdrubali, “The effect of a LED lighting crosswalk on pedestrian safety: Some experimental results,” <i>Safety</i>, vol. 6, no. 2, p. 20, 2020.</li>
   <li>M. Costa, C. Lantieri, V. Vignali, N. Ghasemi, and A. Simone, “Evaluation of an integrated lighting-warning system on motorists’ yielding at unsignalized crosswalks during nighttime,” <i>Transportation Research Part F</i>, vol. 68, pp. 132–143, 2020.</li>
-  <li>D. Bharadwaj, S. Rao, and A. Bhatt, “YOLO-based real-time human detection for smart video surveillance at the edge,” in <i>Proc. IEEE INDICON</i>, 2021.</li>
+  <li>H. H. Nguyen, T. N. Ta, N. C. Nguyen, V. T. Bui, H. M. Pham, and D. M. Nguyen, “YOLO based real-time human detection for smart video surveillance at the edge,” in <i>Proc. IEEE 8th Int. Conf. on Communications and Electronics (ICCE)</i>, 2021. doi: 10.1109/ICCE48956.2021.9352144</li>
   <li>Y. Zhang et al., “ByteTrack: Multi-object tracking by associating every detection box,” in <i>Proc. ECCV</i>, LNCS 13682, Springer, 2022.</li>
   <li>G. Jocher, A. Chaurasia, and J. Qiu, <i>Ultralytics YOLOv8</i>, 2023. <a href="https://github.com/ultralytics/ultralytics">github.com/ultralytics/ultralytics</a></li>
   <li>B. Zhan, D. N. Monekosso, P. Remagnino, S. A. Velastin, and L.-Q. Xu, “Crowd analysis: A survey,” <i>Machine Vision and Applications</i>, vol. 19, no. 5–6, pp. 345–357, 2008.</li>
   <li>M. Shimrat, “Algorithm 112: Position of point relative to polygon,” <i>Communications of the ACM</i>, vol. 5, no. 8, p. 434, 1962.</li>
   <li>E. Maltezos et al., “A video analytics system for person detection combined with edge computing,” <i>Computation</i>, vol. 10, no. 3, p. 35, 2022. doi: 10.3390/computation10030035</li>
-  <li>R. Al Amin, M. Hasan, V. Wiese, and R. Obermaisser, “FPGA-based real-time object detection and classification system using YOLO for edge computing,” in <i>Proc. IEEE</i>, 2024. doi: 10.1109/10537163</li>
-  <li>T. Wang, S. Ren, and H. Zhang, “Nighttime wildlife object detection based on YOLOv8-night,” <i>Electronics Letters</i>, 2024. doi: 10.1049/ell2.13305</li>
-  <li>H. V. L. B. Silva and A. Anpalagan, “EdgeML-driven real-time vehicle tracking and traffic control for traffic management in smart cities,” <i>Applied Sciences</i>, vol. 16, no. 5, p. 2216, 2026. doi: 10.3390/app16052216</li>
+  <li>R. Al Amin, M. Hasan, V. Wiese, and R. Obermaisser, “FPGA-based real-time object detection and classification system using YOLO for edge computing,” <i>IEEE Access</i>, vol. 12, pp. 73268–73278, 2024. doi: 10.1109/ACCESS.2024.3404623</li>
+  <li>T. Wang, S. Ren, and H. Zhang, “Nighttime wildlife object detection based on YOLOv8-night,” <i>Electronics Letters</i>, vol. 60, no. 15, 2024. doi: 10.1049/ell2.13305</li>
+  <li>A. C. Cob-Parro, C. Losada-Gutiérrez, M. Marrón-Romera, A. Gardel-Vicente, and I. Bravo-Muñoz, “Smart video surveillance system based on edge computing,” <i>Sensors</i>, vol. 21, no. 9, p. 2958, 2021. doi: 10.3390/s21092958</li>
   <li>U.S. Department of Transportation, “Exploring cost-effective computer vision solutions for smart transportation systems,” National Transportation Library, Rep. dot/72518, 2023. <a href="https://rosap.ntl.bts.gov/view/dot/72518">rosap.ntl.bts.gov/view/dot/72518</a></li>
+  <li>J. Drake, A. Vennema, L. Slonim, E. Englin, A. Brodeur, A. K. Epstein, and D. L. Fisher, “Evaluating the performance of a web-based vehicle blind zone estimation application: Validation and policy implications,” <i>Frontiers in Future Transportation</i>, vol. 4, 1003175, 2023. doi: 10.3389/ffutr.2023.1003175</li>
 </ol>
 <p class="small"><b>Vendor and project documentation used in Section 4:</b> Mobileye Shield+ product page (ims.mobileye.com); Brigade Electronics, Sidescan Predict (brigade-electronics.com/detection-systems/sidescan-predict); Hikvision AcuSense overview; AXIS Object Analytics (axis.com/products/axis-object-analytics); Frigate NVR documentation, Zones (docs.frigate.video/configuration/zones); Ultralytics model documentation for YOLOv8 and YOLO11 (docs.ultralytics.com); WongKinYiu/yolov7 repository. Accessed October 2026.</p>
 
