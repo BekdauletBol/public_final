@@ -211,3 +211,21 @@ see [LICENSE](LICENSE). The person detector depends on the AGPL-3.0
 [Ultralytics](https://github.com/ultralytics/ultralytics) package;
 [ADR 0009](docs/adr/0009-ultralytics-agpl-and-detector-seam.md) explains the
 consequences and the seam that would allow a permissively licensed detector.
+
+# ps
+##
+## Project history and repository timeline
+
+This project continues the student research work "Edge-distributed pedestrian
+monitoring system using YOLOv8 and geometric spatial analysis", 2nd place at the
+AITU student research conference (НИРС), 2026. The prototype described in that
+work was developed and evaluated before this repository was created.
+
+For the diploma stage the system was rewritten against the diploma requirements
+and imported into this repository on 10 October 2026 as milestone-scoped commits
+(M0–M4). The task board was created on 18 October 2026 and documents those
+milestones retrospectively: each issue records the expected outcome, acceptance
+criteria and the commit hashes that implement it.
+
+From milestone M5 onwards every work item is opened on the board before the work
+starts, developed in a task branch and merged through a pull request.
