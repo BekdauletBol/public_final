@@ -32,6 +32,11 @@ def test_json_line_has_ids_and_extras() -> None:
     assert payload["t"].endswith("+00:00")
 
 
+def test_uvicorn_colour_extra_is_dropped() -> None:
+    payload = json.loads(JsonFormatter().format(record(color_message="\x1b[36mx\x1b[0m")))
+    assert "color_message" not in payload
+
+
 def test_context_is_reset_after_the_block() -> None:
     with camera_context("cam-1"):
         pass

@@ -30,6 +30,10 @@ camera_id_var: ContextVar[str | None] = ContextVar("camera_id", default=None)
 
 #: Attributes every ``LogRecord`` has; anything else was passed with ``extra=``.
 _STANDARD = set(vars(logging.makeLogRecord({}))) | {"message", "asctime", "taskName"}
+#: ``extra`` keys other libraries add that carry nothing for a JSON reader (ANSI colours).
+_DROP = {"color_message"}
+#: Chatty INFO loggers raised to WARNING (alembic lists its plugins on every start).
+_QUIET = ("alembic", "httpx")
 _REQUEST_ID = re.compile(r"[A-Za-z0-9._-]{1,64}")
 _HANDLER_NAME = "publicsafe"
 
@@ -45,7 +49,7 @@ def _context(record: logging.LogRecord) -> dict[str, Any]:
     if cid:
         out["camera_id"] = cid
     for key, value in vars(record).items():
-        if key not in _STANDARD and key not in ("request_id", "camera_id"):
+        if key not in _STANDARD and key not in _DROP and key not in ("request_id", "camera_id"):
             out[key] = value
     return out
 
@@ -101,6 +105,8 @@ def configure_logging(level: str = "INFO", json_logs: bool = True) -> None:
     handler.setFormatter(JsonFormatter() if json_logs else TextFormatter())
     root.addHandler(handler)
     root.setLevel(level.upper())
+    for name in _QUIET:
+        logging.getLogger(name).setLevel(max(logging.WARNING, root.level))
     for name in ("uvicorn", "uvicorn.error"):
         logging.getLogger(name).handlers.clear()
         logging.getLogger(name).propagate = True
