@@ -39,8 +39,12 @@ results are reproducible.
 - **Live dashboard.** Sessions, camera tiles, live frame with overlays, polygon
   zone editor, events table with filters and CSV export, metrics, health and
   security pages. Dark and light themes.
-- **Offline evaluation** (in progress): the same pipeline on MOT17 and
-  recorded sequences with pre-registered metrics.
+- **Offline evaluation.** The same detector and rules on MOT17, image folders,
+  videos and recorded sessions: Hungarian matching, per-rule precision /
+  recall / F1 with bootstrap CIs, McNemar tests, boundary analysis, event
+  metrics with a hysteresis sweep, and a Markdown report with figures.
+- **Structured logs.** One JSON object per line with request and camera ids;
+  every response carries `X-Request-ID`.
 
 ## Architecture
 
@@ -140,23 +144,56 @@ make test           # pytest: unit, integration, security, cv (no network, no GP
 make test-model     # the real YOLOv8n on a golden image, FP16 vs FP32 timing (downloads weights once)
 make test-browser   # Playwright end-to-end tests in Chromium against a test-mode backend
 make test-load      # fake phones against a live server; asserts scheduler fairness and memory bound
+make test-soak      # 8-hour soak (SOAK_DURATION=seconds): memory growth <= 20 %, no crash
 make lint           # ruff, black, mypy (strict on core), eslint, prettier, tsc
+make api-docs       # regenerate docs/API.md from the code (a test fails if it is stale)
 ```
 
-218 automated tests in total:
+260 automated tests in total:
 
 | Suite | Tests | Runner |
 |---|---|---|
-| Unit (geometry, rules with Hypothesis, state machine, mailbox, pairing, config) | 136 | `make test` |
-| Integration (API, WebSockets, pipeline, migrations, scripted fake phone) | 63 | `make test` |
+| Unit (geometry, rules with Hypothesis, state machine, mailbox, pairing, config, eval metrics and datasets, logs, API reference) | 163 | `make test` |
+| Integration (API, WebSockets, pipeline, migrations, scripted fake phone, eval CLI and annotation page) | 70 | `make test` |
 | Security (login rate limit and timing, PIN redeem limits, secrets never in responses or logs) | 8 | `make test` |
-| Computer vision (scripted sequences to events, zone payloads, recorder, golden image; 2 need the real weights) | 8 | `make test`, `make test-model` |
+| Computer vision (scripted sequences to events, recorder, 100-frame synthetic eval with hand-computed numbers, golden image; 2 need the real weights) | 15 | `make test`, `make test-model` |
 | End-to-end in Chromium (pairing, zones) | 3 | `make test-browser` |
-| Load (1 scenario, 3 fake phones at 15 fps, latest vs FIFO) | 1 | `make test-load` |
+| Load (3 fake phones at 15 fps, latest vs FIFO; `LOADTEST_DETECTOR=yolo` for the real model) | 1 | `make test-load` |
+| Soak (3 fake phones at 10 fps for 8 h, memory sampled every 30 s) | 1 | `make test-soak` |
 
 To run the migration round-trip against PostgreSQL:
 `docker compose up -d db`, then
 `PUBLICSAFE_TEST_PG_URL=postgresql+psycopg://publicsafe:publicsafe@127.0.0.1:55432/publicsafe make test`.
+
+## Running the experiments
+
+The research questions are answered by seven pre-registered experiments
+(E1-E7, spec I.5). Commands, success criteria and the results measured so
+far are in [docs/EVALUATION.md](docs/EVALUATION.md); in short:
+
+```bash
+.venv/bin/publicsafe eval fetch mot17      # MOT17-02, -04, -09 from the official archive (~465 MB)
+.venv/bin/publicsafe eval annotate --sequence data/mot17/train/MOT17-04 \
+  --zone-file data/zones/MOT17-04.json --zone strip --every 5 --annotator <name>
+make eval CONFIG=configs/e1_mot17.yaml SWEEP="enter_frames=1,3,5 exit_frames=1,5,10"   # E1, E2, E3
+make test-load                             # E5: latest-frame mailbox vs FIFO
+```
+
+The zone files in `data/zones/` are placeholders until the owner draws the
+real zones; `configs/e1_mot17_derived.yaml` runs the same evaluation on
+automatically derived ground truth as a sanity check.
+
+## Troubleshooting
+
+| Problem | Fix |
+|---|---|
+| Certificate warning on the Mac | `mkcert -install`, restart the browser |
+| Certificate warning on the phone | Install and trust the root CA ([docs/PHONE_SETUP.md](docs/PHONE_SETUP.md)); after the Mac changes network run `publicsafe certs --force` |
+| Phone says the camera is denied | iOS: Settings > Safari > Camera > Allow; Android Chrome: lock icon > Permissions > Camera; the page must be `https://` |
+| "MPS unavailable" | Intel Mac or old macOS: inference falls back to CPU; lower the camera's target fps (5) and max long edge (960) |
+| "Refusing to start" | The message names the fix (`publicsafe admin set-password`, `make certs`) |
+
+More in [docs/SETUP_MACOS.md](docs/SETUP_MACOS.md#5-troubleshooting).
 
 ## Project status
 
@@ -167,21 +204,30 @@ To run the migration round-trip against PostgreSQL:
 | M2 | PIN pairing, device credentials, camera and dashboard WebSockets, dashboard UI | Done |
 | M3 | Frame ingest, mailbox scheduler, phone capture page, metrics, load test, E2E suite | Done |
 | M4 | YOLOv8n detection, six membership rules, state machine, zone editor, overlays, events, CSV | Done |
-| M5 | Evaluation harness: datasets, metrics, rule comparison, latency benchmark | In progress |
-| M6 | Structured logging, API reference, demo checklist, soak test | Planned |
+| M5 | Evaluation harness: datasets, metrics, rule comparison, latency benchmark | Done (headline run waits for the owner's zones and manual labels) |
+| M6 | Structured logging, API reference, demo checklist, soak test | Done (phone demo items and the full 8-hour soak are manual, see [DEMO_CHECKLIST](docs/DEMO_CHECKLIST.md)) |
 
 Known limitations:
 
 - One inference worker and one YOLOv8n model per laptop; throughput is shared
-  by all cameras (about 50 ms per frame on an Apple M-series GPU).
+  by all cameras (about 18 ms inference and 27 ms decode + inference + rules
+  per 1080p frame on an M1 GPU; 3 phones at 10 fps keep p99 below 70 ms).
 - No person tracking: counts are per frame, so identities are not followed
   across frames. Tracking is a planned extension behind the detector seam.
 - Tested with one iPhone (Safari); Android Chrome is supported by design but
   has not been verified on a device.
 - Frames are processed in memory only. Nothing is recorded unless the
   evaluation recorder is switched on explicitly.
-- Evaluation results (precision, recall, F1 per rule; latency benchmark) are
-  not available yet; they are the subject of M5.
+- The evaluation numbers so far come from MOT17 with placeholder zones and
+  *derived* ground truth (GT box bottom-centre in the zone), which favours the
+  foot-point rules: `bottom_center` precision 0.92 against 0.45 for box
+  overlap at similar recall. The headline comparison needs manual labels on
+  the owner's zones and a second data source ([EVALUATION.md](docs/EVALUATION.md)).
+- YOLOv8n at 640 px finds only 41-46 % of the people in the crowded, distant
+  MOT17-02 and -04 scenes (90 % in the close-up MOT17-09), so person-level
+  recall is limited by the detector, not by the zone rules.
+- Tracking (experiment E4) is not implemented; `eval run --track` stops with
+  an error.
 - Phones need the mkcert root certificate installed once, which is a manual
   step on iOS.
 
@@ -192,8 +238,11 @@ Known limitations:
 | [docs/SETUP_MACOS.md](docs/SETUP_MACOS.md) | Prerequisites, one-time setup, running, tests, troubleshooting |
 | [docs/PHONE_SETUP.md](docs/PHONE_SETUP.md) | Trusting the root certificate on iOS and Android, manual phone checklist |
 | [docs/OPERATIONS.md](docs/OPERATIONS.md) | Repository layout, phones, detection, load test, database, configuration |
-| [docs/EVALUATION.md](docs/EVALUATION.md) | Model checksum, FP16 measurement, evaluation plan and success criteria |
-| [docs/adr/README.md](docs/adr/README.md) | Architecture decision records 0001 to 0009 |
+| [docs/EVALUATION.md](docs/EVALUATION.md) | Evaluation harness, datasets and checksums, experiments E1-E7, success criteria and results |
+| [docs/results/](docs/results/) | Committed evaluation reports (`report.md`, `results.csv`, `metrics.json`, figures) |
+| [docs/API.md](docs/API.md) | REST endpoints, schemas and WebSocket messages (generated from the code) |
+| [docs/DEMO_CHECKLIST.md](docs/DEMO_CHECKLIST.md) | Definition of Done: what was run, real outputs, what is left for real phones |
+| [docs/adr/README.md](docs/adr/README.md) | Architecture decision records 0001 to 0011 |
 | [docs/IMPLEMENTATION_SPEC.md](docs/IMPLEMENTATION_SPEC.md) | The full implementation specification the project is built from |
 | [docs/diagrams/README.md](docs/diagrams/README.md) | Architecture diagrams: context, use case, component, data model, sequence; PlantUML sources and PNG/SVG exports |
 | [docs/report/SE-2405_Bolatov_ProbPeriod1.pdf](docs/report/SE-2405_Bolatov_ProbPeriod1.pdf) | Probation period 1 report |

@@ -14,5 +14,8 @@ Alternatives, Consequences. Status is Accepted unless stated.
 | 0007 | [Overlays are rendered client-side from JSON](0007-client-side-overlays.md) | M4 |
 | 0008 | [All membership rules computed every frame](0008-all-rules-every-frame.md) | M4 |
 | 0009 | [AGPL-3.0 ultralytics behind the Detector seam](0009-ultralytics-agpl-and-detector-seam.md) | M4 |
+| 0010 | [Evaluation data: partial MOT17 fetch, guarded derived GT, metric conventions](0010-evaluation-data-and-ground-truth.md) | M5 |
+| 0011 | [Structured JSON logs with stdlib logging and context variables](0011-structured-json-logging.md) | M6 |
 
-All ADRs required by the specification (Section O.2) are written.
+All ADRs required by the specification (Section O.2) are written; 0010 and 0011
+record decisions taken while building M5 and M6.
