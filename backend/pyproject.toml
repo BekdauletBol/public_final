@@ -81,6 +81,7 @@ ignore = ["RUF012"]
 "publicsafe/**/cli.py" = ["B008"]  # typer.Option() defaults are the documented idiom
 "publicsafe/api/**" = ["B008"]  # FastAPI Depends() defaults are the documented idiom
 "publicsafe/eval/annotate.py" = ["E501"]  # the embedded HTML/JS page
+"publicsafe/apidoc.py" = ["E501"]  # the hand-written Markdown tables
 
 [tool.black]
 line-length = 100

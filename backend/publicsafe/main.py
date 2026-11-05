@@ -42,6 +42,7 @@ from publicsafe.core.detector import Detector, FakeDetector, NullDetector, Ultra
 from publicsafe.core.mailbox import Scheduler
 from publicsafe.db import migrate
 from publicsafe.db.base import make_engine, make_sessionmaker, resolve_database_url
+from publicsafe.logs import RequestContextMiddleware, configure_logging
 from publicsafe.worker.inference import InferenceWorker
 from publicsafe.worker.pipeline import Pipeline
 from publicsafe.worker.recorder import Recorder
@@ -226,6 +227,17 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         await asyncio.to_thread(detector.warm_up)
     worker: InferenceWorker = app.state.worker
     worker.start()
+    log.info(
+        "public.safe %s started",
+        __version__,
+        extra={
+            "detector": getattr(detector, "name", None),
+            "device": app.state.device,
+            "model_sha256": app.state.model_sha256,
+            "scheduler": settings.scheduler_strategy,
+            "test_mode": settings.test_mode,
+        },
+    )
     tasks = [
         asyncio.create_task(sweep_loop(hub, settings.sweep_interval_s), name="sweeper"),
         asyncio.create_task(metrics_loop(hub, settings.metrics_interval_s), name="metrics"),
@@ -249,6 +261,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 def create_app(settings: Settings | None = None) -> FastAPI:
     """Build the application. ``settings`` is injectable for tests."""
     settings = settings or get_settings()
+    configure_logging(settings.log_level_name, settings.log_json)
     # TLS files are checked by uvicorn itself (it needs them); here we check the rest.
     warnings = startup_checks(settings, require_tls=False)
     for message in warnings:
@@ -328,4 +341,5 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         app.add_middleware(SecurityHeadersMiddleware, csp=CSP_POLICY)
     else:
         log.info("frontend/dist not found; API only (use the Vite dev server or `make build`)")
+    app.add_middleware(RequestContextMiddleware)  # outermost: ids and access log for everything
     return app

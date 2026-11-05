@@ -39,7 +39,10 @@ def run(
     """Start the HTTPS server (uvicorn) after the startup checks."""
     import uvicorn
 
+    from publicsafe.logs import configure_logging
+
     settings = get_settings()
+    configure_logging(settings.log_level_name, settings.log_json)
     try:
         warnings = startup_checks(settings, require_tls=not no_tls)
     except ConfigError as exc:
@@ -61,6 +64,7 @@ def run(
         ssl_certfile=None if no_tls else str(settings.ssl_certfile),
         ssl_keyfile=None if no_tls else str(settings.ssl_keyfile),
         log_level=settings.log_level.lower(),
+        log_config=None,  # keep publicsafe.logs' JSON handler (M6)
         ws="auto",
     )
 
@@ -86,6 +90,24 @@ def certs(
     typer.echo("")
     typer.echo(phone_ca_instructions(result.caroot))
     typer.echo("Full guide: docs/PHONE_SETUP.md (served at https://<host>:8443/help/phone)")
+
+
+@app.command("api-docs")
+def api_docs(
+    out: Path = typer.Option(ROOT_DIR / "docs" / "API.md", help="Where to write the reference."),
+    check: bool = typer.Option(False, help="Exit 1 if the file differs from the code."),
+) -> None:
+    """Write docs/API.md from the OpenAPI schema and the WebSocket tables (M6)."""
+    from publicsafe.apidoc import render_default
+
+    text = render_default()
+    if check:
+        if not out.is_file() or out.read_text(encoding="utf-8") != text:
+            raise _fail(f"{out} is out of date; run `make api-docs`", 1)
+        typer.echo(f"{out} is up to date")
+        return
+    out.write_text(text, encoding="utf-8")
+    typer.echo(f"wrote {out}")
 
 
 admin_app = typer.Typer(help="Admin account management.", no_args_is_help=True)

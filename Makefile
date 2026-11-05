@@ -16,7 +16,7 @@ CONFIG ?= configs/e1_mot17.yaml
 # Pick the Node version from .nvmrc when nvm is installed; otherwise use PATH.
 NODE_ENV = if [ -s "$(NVM_SH)" ]; then source "$(NVM_SH)" && nvm use --silent >/dev/null 2>&1 || true; fi
 
-.PHONY: help setup lock certs dev run build test test-browser test-load test-model eval lint format clean
+.PHONY: help setup lock certs dev run build test test-browser test-load test-soak test-model eval api-docs lint format clean
 
 help: ## list targets
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN{FS=":.*?## "}{printf "  %-14s %s\n", $$1, $$2}'
@@ -58,6 +58,9 @@ run: build ## serve everything from https://0.0.0.0:8443 (demo / Definition of D
 test: ## unit + integration + security + cv tests (no network, no GPU, FakeDetector)
 	cd backend && $(PY) -m pytest -m "not model and not load and not browser" -q
 
+test-soak: ## soak test (default 8 h, SOAK_DURATION=seconds): memory growth <= 20 %, no crash
+	$(PY) backend/tests/load/run_soak.py
+
 test-model: ## real YOLOv8n on the golden image (downloads weights once)
 	cd backend && $(PY) -m pytest -m model -q
 
@@ -70,6 +73,9 @@ test-load: ## load test against a TEST_MODE server; asserts fairness and memory 
 
 eval: ## run the evaluation harness: make eval CONFIG=configs/e1_mot17.yaml [SWEEP="enter_frames=1,3,5 exit_frames=1,5,10"]
 	$(BIN)/publicsafe eval run --config "$(CONFIG)" $(if $(SWEEP),--sweep "$(SWEEP)")
+
+api-docs: ## regenerate docs/API.md from the OpenAPI schema and the WebSocket tables
+	$(BIN)/publicsafe api-docs
 
 lint: ## ruff + black --check + mypy (strict on core) + eslint + prettier --check + tsc
 	cd backend && $(BIN)/ruff check . && $(BIN)/black --check . && $(BIN)/mypy

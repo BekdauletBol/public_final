@@ -2,7 +2,9 @@
 
 Asserts (Section L): fairness ratio <= 1.3, memory growth < 20 %, p99 queue wait reported;
 then repeats with SCHEDULER_STRATEGY=fifo and asserts that queue wait grows.
-Duration per run: LOADTEST_DURATION seconds (default 60).
+Duration per run: LOADTEST_DURATION seconds (default 60). LOADTEST_DETECTOR=yolo runs the real
+YOLOv8n instead (the strict FIFO assertion is then reported, not enforced), and LOADTEST_SOURCE
+streams a directory of your own JPEGs (for example MOT17 frames resized to 1280x720).
 """
 
 from __future__ import annotations
@@ -25,6 +27,8 @@ PY = Path(sys.executable)
 DURATION = float(os.environ.get("LOADTEST_DURATION", "60"))
 PHONES = os.environ.get("LOADTEST_PHONES", "3")
 FPS = os.environ.get("LOADTEST_FPS", "15")
+DETECTOR = os.environ.get("LOADTEST_DETECTOR", "fake")
+SOURCE = os.environ.get("LOADTEST_SOURCE")
 PASSWORD = "loadtest-password"
 
 
@@ -52,7 +56,7 @@ def start_server(workdir: Path, port: int, strategy: str, hash_: str) -> subproc
         "ADMIN_PASSWORD_HASH": hash_,
         "DATABASE_URL": f"sqlite+pysqlite:///{workdir / f'load-{strategy}.db'}",
         "TEST_MODE": "1",
-        "DETECTOR": "fake",
+        "DETECTOR": DETECTOR,
         "FAKE_DETECTOR_SLEEP_MS": "20",
         "SCHEDULER_STRATEGY": strategy,
         "LOG_LEVEL": "WARNING",
@@ -123,9 +127,12 @@ def main() -> int:
     failures: list[str] = []
     with tempfile.TemporaryDirectory() as tmp:
         work = Path(tmp)
-        images = work / "frames"
-        images.mkdir()
-        make_images(images)
+        if SOURCE:
+            images = Path(SOURCE)
+        else:
+            images = work / "frames"
+            images.mkdir()
+            make_images(images)
         results: dict[str, dict] = {}
         for strategy in ("latest", "fifo"):
             port = free_port()
@@ -155,9 +162,11 @@ def main() -> int:
     if not qw_latest:
         failures.append("p99 queue wait not reported under latest")
     if qw_latest and qw_fifo and max(qw_fifo) <= max(qw_latest):
-        failures.append(
-            f"fifo p99 queue wait {max(qw_fifo)} did not exceed latest {max(qw_latest)}"
-        )
+        message = f"fifo p99 queue wait {max(qw_fifo)} did not exceed latest {max(qw_latest)}"
+        if DETECTOR == "fake":
+            failures.append(message)
+        else:  # a fast real model may keep up with the offered load; report it
+            print(f"note: {message}")
     if (
         fifo["scheduler_backlog_end"] is not None
         and fifo["scheduler_backlog_end"] == 0
@@ -167,7 +176,7 @@ def main() -> int:
             "note: fifo backlog drained by the end (short run); queue-wait comparison still applies"
         )
 
-    print("\n== summary ==")
+    print(f"\n== summary (detector={DETECTOR}, {PHONES} phones @ {FPS} fps) ==")
     mem_start, mem_end = latest["server_mem_mb_start"], latest["server_mem_mb_end"]
     qw_l = max(qw_latest) if qw_latest else None
     qw_f = max(qw_fifo) if qw_fifo else None

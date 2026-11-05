@@ -9,6 +9,7 @@ from collections.abc import Callable
 from publicsafe.core.mailbox import Scheduler
 from publicsafe.core.models import Frame, FrameResult
 from publicsafe.core.timing import now_ms
+from publicsafe.logs import camera_context
 from publicsafe.worker.pipeline import DecodeError, Pipeline
 
 log = logging.getLogger("publicsafe.worker")
@@ -47,17 +48,16 @@ class InferenceWorker(threading.Thread):
             if frame is None:
                 continue
             frame.t_dequeued_ms = now_ms()
-            try:
-                result = self.pipeline.process(frame)
-            except DecodeError as exc:
-                self.errors += 1
-                self.on_error(frame, exc)
-            except Exception as exc:
-                self.errors += 1
-                log.exception(
-                    "frame processing failed camera=%s seq=%s", frame.camera_id, frame.seq
-                )
-                self.on_error(frame, exc)
-            else:
-                self.processed += 1
-                self.on_result(frame, result)
+            with camera_context(frame.camera_id):
+                try:
+                    result = self.pipeline.process(frame)
+                except DecodeError as exc:
+                    self.errors += 1
+                    self.on_error(frame, exc)
+                except Exception as exc:
+                    self.errors += 1
+                    log.exception("frame processing failed seq=%s", frame.seq)
+                    self.on_error(frame, exc)
+                else:
+                    self.processed += 1
+                    self.on_result(frame, result)
