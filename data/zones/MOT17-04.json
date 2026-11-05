@@ -1,0 +1,11 @@
+{
+  "sequence": "MOT17-04",
+  "frame_w": 1920,
+  "frame_h": 1080,
+  "TODO": "Placeholder polygons copied from the spec example (I.2). The owner draws the real three zones for this sequence and replaces them before the headline run.",
+  "zones": [
+    {"name": "strip", "points": [[0.10, 0.55], [0.90, 0.55], [0.90, 0.75], [0.10, 0.75]]},
+    {"name": "corner", "points": [[0.60, 0.30], [0.95, 0.30], [0.95, 0.60]]},
+    {"name": "irregular", "points": [[0.2, 0.4], [0.5, 0.35], [0.7, 0.6], [0.4, 0.8], [0.15, 0.7]]}
+  ]
+}

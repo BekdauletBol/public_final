@@ -68,9 +68,8 @@ test-load: ## load test against a TEST_MODE server; asserts fairness and memory 
 	@if [ -f backend/tests/load/run_loadtest.py ]; then $(PY) backend/tests/load/run_loadtest.py; \
 	else echo "test-load: the load test arrives in M3"; fi
 
-eval: ## run the evaluation harness: make eval CONFIG=configs/e1_mot17.yaml
-	@if [ -f "$(CONFIG)" ]; then $(BIN)/publicsafe eval run --config "$(CONFIG)"; \
-	else echo "eval: $(CONFIG) not found (the harness arrives in M5)"; fi
+eval: ## run the evaluation harness: make eval CONFIG=configs/e1_mot17.yaml [SWEEP="enter_frames=1,3,5 exit_frames=1,5,10"]
+	$(BIN)/publicsafe eval run --config "$(CONFIG)" $(if $(SWEEP),--sweep "$(SWEEP)")
 
 lint: ## ruff + black --check + mypy (strict on core) + eslint + prettier --check + tsc
 	cd backend && $(BIN)/ruff check . && $(BIN)/black --check . && $(BIN)/mypy

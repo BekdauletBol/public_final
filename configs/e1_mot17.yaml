@@ -1,0 +1,62 @@
+# E1/E2/E3 on MOT17 with the owner's manual in-zone ground truth (headline run).
+# Create the GT with: publicsafe eval annotate --sequence data/mot17/train/MOT17-04 \
+#   --zone-file data/zones/MOT17-04.json --zone strip --every 5 --annotator <name>
+# Keys follow spec I.5a; unknown keys are rejected. Paths are relative to the repository root.
+# MOT17 is fetched with `publicsafe eval fetch mot17` (git-ignored, never committed).
+
+sequences:
+  - name: MOT17-02
+    path: data/mot17/train/MOT17-02
+    fps: 30
+    zone_file: data/zones/MOT17-02.json
+    gt_files:
+      strip: data/gt/MOT17-02.strip.csv
+      corner: data/gt/MOT17-02.corner.csv
+      irregular: data/gt/MOT17-02.irregular.csv
+  - name: MOT17-04
+    path: data/mot17/train/MOT17-04
+    fps: 30
+    zone_file: data/zones/MOT17-04.json
+    gt_files:
+      strip: data/gt/MOT17-04.strip.csv
+      corner: data/gt/MOT17-04.corner.csv
+      irregular: data/gt/MOT17-04.irregular.csv
+  - name: MOT17-09
+    path: data/mot17/train/MOT17-09
+    fps: 30
+    zone_file: data/zones/MOT17-09.json
+    gt_files:
+      strip: data/gt/MOT17-09.strip.csv
+      corner: data/gt/MOT17-09.corner.csv
+      irregular: data/gt/MOT17-09.irregular.csv
+
+detector:
+  model: yolov8n.pt # data/models/yolov8n.pt, SHA-256 in docs/EVALUATION.md
+  device: null # null = auto (mps -> cuda -> cpu)
+  conf: 0.30
+  imgsz: 640
+  half: false
+
+rules: all
+active_rule: bottom_center # drives state/debounced_count in per_frame.jsonl only
+
+state_machine:
+  enter_frames: 3
+  exit_frames: 5
+
+matching:
+  iou: 0.5
+  gt_classes: [1] # 1 = pedestrian; flag=0 rows and classes 2-12 are ignore regions
+  min_visibility: 0.25
+
+events:
+  tolerance_frames: 10
+
+stats:
+  bootstrap_n: 5000
+  seed: 1234
+
+assert_invariants: true
+allow_derived_gt: false
+
+output_dir: data/eval

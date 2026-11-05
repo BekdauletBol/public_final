@@ -1,4 +1,4 @@
-"""``publicsafe`` command line: run, certs (M0); admin, eval, loadtest in later milestones."""
+"""``publicsafe`` command line: run, certs, admin, loadtest and the ``eval`` sub-commands."""
 
 from __future__ import annotations
 
@@ -92,9 +92,11 @@ admin_app = typer.Typer(help="Admin account management.", no_args_is_help=True)
 app.add_typer(admin_app, name="admin")
 
 
+from publicsafe.eval.cli import eval_app as _eval_app  # noqa: E402
 from publicsafe.eval.cli import loadtest as _loadtest  # noqa: E402
 
 app.command("loadtest")(_loadtest)
+app.add_typer(_eval_app, name="eval")
 
 MIN_PASSWORD_LENGTH = 8
 
