@@ -26,6 +26,32 @@ def test_hungarian_prefers_the_global_best_assignment() -> None:
     assert match.unmatched_dets == [] and match.unmatched_gts == []
 
 
+def test_a_low_iou_pair_never_pushes_out_a_valid_one() -> None:
+    # IoU: d0-g0 0.193, d0-g1 0.488, d1-g0 0.336, d1-g1 0.554. Maximising the raw IoU sum
+    # picks (d0-g1, d1-g0) = 0.824, both below 0.5, and loses the valid d1-g1 pair.
+    dets = np.array([[10, 35, 25, 46], [12, 33, 30, 47]])
+    gts = np.array([[18, 37, 33, 52], [12, 37, 31, 45]])
+    match = m.match_frame(dets, gts)
+    assert match.pairs == [(1, 1)]
+    assert match.unmatched_dets == [0] and match.unmatched_gts == [0]
+
+
+def test_best_iou_with_an_ignore_region_drops_the_detection() -> None:
+    # The detection is the ignore box itself (IoU 1.0) and overlaps a counted person by 0.67.
+    match = m.match_frame(
+        np.array([[0, 0, 10, 10]]), np.array([[0, 0, 10, 15]]), np.array([[0, 0, 10, 10]])
+    )
+    assert match.ignored_dets == [0] and match.pairs == [] and match.unmatched_gts == [0]
+
+
+def test_duplicate_detection_near_an_ignore_region_is_still_a_false_positive() -> None:
+    # d1 overlaps the (already matched) person by 0.82 and the ignore box by 0.73:
+    # its best IoU is with the person, so it is an FP, not dropped.
+    dets = np.array([[0, 0, 10, 10], [0, 0, 10, 12.2]])
+    match = m.match_frame(dets, np.array([[0, 0, 10, 10]]), np.array([[0, 2, 10, 14]]))
+    assert match.pairs == [(0, 0)] and match.unmatched_dets == [1] and match.ignored_dets == []
+
+
 def test_detection_on_ignore_region_is_dropped_not_fp() -> None:
     dets = np.array([[0, 0, 10, 10], [50, 50, 60, 60], [100, 100, 110, 110]])
     gts = np.array([[0, 0, 10, 10]])

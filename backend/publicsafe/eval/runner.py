@@ -154,6 +154,9 @@ class EvalConfig:
         )
         if not top["sequences"]:
             raise ConfigError("config: `sequences` must list at least one sequence")
+        names = [str(seq.get("name")) for seq in top["sequences"]]
+        if len(set(names)) != len(names):
+            raise ConfigError("config: sequence names must be unique")
         sequences = []
         for i, s in enumerate(top["sequences"]):
             s = _take(
@@ -406,7 +409,13 @@ def detect_sequence(
 
 
 def zone_frames(data: SequenceData, zone: str) -> list[m.ZoneFrame]:
-    """Annotated frames of one zone, with GT labels and boundary distances."""
+    """Annotated frames of one zone, with GT labels and boundary distances.
+
+    A counted GT person with no label on an annotated frame (for example
+    because the eval's ``min_visibility`` is lower than the annotator's) is
+    treated as an ignore region for this zone: neither the person nor the
+    detection matched to them is counted. ``missing_labels`` reports how often.
+    """
     labels = data.gt[zone]
     poly = ZonePolygon(data.zones.zone(zone).points, data.width, data.height)
     out = []
@@ -414,17 +423,29 @@ def zone_frames(data: SequenceData, zone: str) -> list[m.ZoneFrame]:
         if frame not in labels.annotated:
             continue
         counted = data.counted[frame]
+        match = data.matches[frame]
         in_zone = []
-        for b in counted:
+        unlabelled: set[int] = set()
+        for g, b in enumerate(counted):
             value = labels.labels.get((frame, b.person_id))
             if value is None:
-                data.missing_labels += 1
+                unlabelled.add(g)
                 value = 0
             in_zone.append(value)
+        if unlabelled:
+            data.missing_labels += len(unlabelled)
+            match = m.FrameMatch(
+                pairs=[(d, g) for d, g in match.pairs if g not in unlabelled],
+                unmatched_dets=match.unmatched_dets,
+                ignored_dets=sorted(
+                    [*match.ignored_dets, *(d for d, g in match.pairs if g in unlabelled)]
+                ),
+                unmatched_gts=[g for g in match.unmatched_gts if g not in unlabelled],
+            )
         out.append(
             m.ZoneFrame(
                 frame=frame,
-                match=data.matches[frame],
+                match=match,
                 hits=data.hits[frame][zone],
                 in_zone=in_zone,
                 gt_distance_px=[_signed_distance(poly, *b.bottom_center) for b in counted],
@@ -433,16 +454,57 @@ def zone_frames(data: SequenceData, zone: str) -> list[m.ZoneFrame]:
     return out
 
 
+def zone_timeline(
+    data: SequenceData, zone: str, frames: Sequence[m.ZoneFrame], rules: Sequence[str]
+) -> m.EventTimeline:
+    """Every video frame from the first to the last annotated one, for the event level.
+
+    Predictions come from every frame, as in the live system; the truth count
+    is held from the last annotated frame, so sparse labels (``--every k``)
+    still give a timeline in video frames for the state machine and tolerance.
+    """
+    if not frames:
+        return m.EventTimeline([], [], {rule: [] for rule in rules})
+    annotated = {zf.frame: zf for zf in frames}
+    first, last = frames[0].frame, frames[-1].frame
+    numbers = [f for f in data.frames if first <= f <= last]
+    truth: list[int] = []
+    pred: dict[str, list[int]] = {rule: [] for rule in rules}
+    current = 0
+    for f in numbers:
+        zf = annotated.get(f)
+        if zf is not None:
+            current = sum(1 for v in zf.in_zone if v == 1)
+            for rule in rules:
+                pred[rule].append(len(zf.counted_hits(rule)))
+        else:
+            dropped = set(data.matches[f].ignored_dets)
+            for rule in rules:
+                pred[rule].append(len(set(data.hits[f][zone][rule]) - dropped))
+        truth.append(current)
+    return m.EventTimeline(numbers, truth, pred)
+
+
 def _pooled(
     per_zone: dict[tuple[str, str], list[m.ZoneFrame]], cfg: EvalConfig
 ) -> dict[str, dict[str, Any]]:
-    """Rows pooled over every (sequence, zone): person metrics and bootstrap over all units."""
-    frames = [zf for zfs in per_zone.values() for zf in zfs]
+    """Rows pooled over every (sequence, zone).
+
+    The bootstrap resamples (sequence, frame) clusters: the zones of one frame
+    share its detections, so resampling them separately would make the CIs too
+    narrow.
+    """
+    keys = [(seq, zf.frame) for (seq, _zone), zfs in per_zone.items() for zf in zfs]
+    cluster = {key: i for i, key in enumerate(dict.fromkeys(keys))}
+    rows_to_cluster = np.array([cluster[k] for k in keys], dtype=np.int64)
     out: dict[str, dict[str, Any]] = {}
     for rule in cfg.rules:
-        counts = m.person_counts(frames, rule)
+        per_frame = [m.person_counts(zfs, rule) for zfs in per_zone.values()]
+        counts = np.concatenate(per_frame) if per_frame else np.zeros((0, 5), np.int64)
+        clustered = np.zeros((len(cluster), 5), dtype=np.int64)
+        np.add.at(clustered, rows_to_cluster, counts)
         tp, fp, fn, tn, missed = (int(v) for v in counts.sum(axis=0))
-        ci = m.bootstrap_ci(counts, cfg.bootstrap_n, cfg.seed)
+        ci = m.bootstrap_ci(clustered, cfg.bootstrap_n, cfg.seed)
         out[rule] = {
             "tp": tp,
             "fp": fp,
@@ -460,7 +522,7 @@ def _pooled(
     return out
 
 
-def _sum_events(rows: list[dict[str, Any]]) -> dict[str, float]:
+def _sum_events(rows: list[dict[str, Any]], timing_errors: Sequence[float]) -> dict[str, float]:
     """Pool event counts over zones (precision/recall from the summed matches)."""
     n_pred = sum(r["events_pred"] for r in rows)
     n_truth = sum(r["events_truth"] for r in rows)
@@ -474,6 +536,8 @@ def _sum_events(rows: list[dict[str, Any]]) -> dict[str, float]:
         "event_precision": m._safe_div(matched, n_pred),
         "event_recall": m._safe_div(matched, n_truth),
         "event_f1": m._safe_div(2 * matched, n_pred + n_truth),
+        "timing_err_median": float(np.median(timing_errors)) if timing_errors else math.nan,
+        "timing_err_p90": float(np.percentile(timing_errors, 90)) if timing_errors else math.nan,
         "duplicate_rate": m._safe_div(dups, n_pred),
         "events_pred": n_pred,
         "events_truth": n_truth,
@@ -487,7 +551,9 @@ def compute_metrics(
     results: list[dict[str, Any]] = []
     detail: dict[str, Any] = {}
     per_zone: dict[tuple[str, str], list[m.ZoneFrame]] = {}
+    timing: dict[str, list[float]] = {rule: [] for rule in cfg.rules}
     sweep_rows: list[dict[str, Any]] = []
+    sweep_timing: dict[tuple[str, int, int], list[float]] = {}
     for data in datasets:
         det = m.detector_recall(
             [data.matches[f] for f in data.frames], [len(data.counted[f]) for f in data.frames]
@@ -495,6 +561,7 @@ def compute_metrics(
         detail[data.name] = {"detector": det, "zones": {}, "frames": len(data.frames)}
         for zone in data.zones.names:
             frames = zone_frames(data, zone)
+            timeline = zone_timeline(data, zone, frames, cfg.rules)
             per_zone[(data.name, zone)] = frames
             ev = m.evaluate_zone(
                 frames,
@@ -505,9 +572,11 @@ def compute_metrics(
                 tolerance=cfg.tolerance_frames,
                 bootstrap_n=cfg.bootstrap_n,
                 seed=cfg.seed,
+                timeline=timeline,
             )
             detail[data.name]["zones"][zone] = {
                 "frames": ev["frames"],
+                "timeline_frames": len(timeline.frames),
                 "gt_sources": sorted(data.gt[zone].sources),
                 "annotators": sorted(data.gt[zone].annotators),
                 "mcnemar": ev["mcnemar"],
@@ -519,6 +588,7 @@ def compute_metrics(
                 },
             }
             for rule, v in ev["rules"].items():
+                timing[rule].extend(v["timing_errors"])
                 results.append(
                     {
                         "sequence": data.name,
@@ -532,6 +602,12 @@ def compute_metrics(
                 )
             for enter, exit_ in sweep:
                 for rule in cfg.rules:
+                    em = m.event_metrics(
+                        timeline, rule, data.fps, enter, exit_, cfg.tolerance_frames
+                    )
+                    sweep_timing.setdefault((rule, enter, exit_), []).extend(
+                        em.pop("timing_errors")
+                    )
                     sweep_rows.append(
                         {
                             "sequence": data.name,
@@ -539,13 +615,7 @@ def compute_metrics(
                             "rule": rule,
                             "enter_frames": enter,
                             "exit_frames": exit_,
-                            **{
-                                k: v
-                                for k, v in m.event_metrics(
-                                    frames, rule, data.fps, enter, exit_, cfg.tolerance_frames
-                                ).items()
-                                if k != "timing_errors"
-                            },
+                            **em,
                         }
                     )
 
@@ -555,7 +625,7 @@ def compute_metrics(
     all_gt = [len(d.counted[f]) for d in datasets for f in d.frames]
     det_all = m.detector_recall(all_matches, all_gt)
     for rule in cfg.rules:
-        events = _sum_events([r for r in results if r["rule"] == rule])
+        events = _sum_events([r for r in results if r["rule"] == rule], timing[rule])
         results.append(
             {
                 "sequence": POOLED,
@@ -563,8 +633,6 @@ def compute_metrics(
                 "rule": rule,
                 **pooled[rule],
                 **events,
-                "timing_err_median": math.nan,
-                "timing_err_p90": math.nan,
                 "detector_recall": det_all["detector_recall"],
             }
         )
@@ -580,7 +648,12 @@ def compute_metrics(
                 if r["rule"] == rule and r["enter_frames"] == enter and r["exit_frames"] == exit_
             ]
             sweep_pooled.append(
-                {"rule": rule, "enter_frames": enter, "exit_frames": exit_, **_sum_events(rows)}
+                {
+                    "rule": rule,
+                    "enter_frames": enter,
+                    "exit_frames": exit_,
+                    **_sum_events(rows, sweep_timing.get((rule, enter, exit_), [])),
+                }
             )
 
     timings = {

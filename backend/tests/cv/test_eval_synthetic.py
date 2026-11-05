@@ -88,7 +88,15 @@ def build_sequence(root: Path) -> Path:
     return seq
 
 
-def build_run(root: Path, *, assert_invariants: bool = True) -> Path:
+def build_run(
+    root: Path,
+    *,
+    assert_invariants: bool = True,
+    every: int = 1,
+    unlabelled: tuple[int, ...] = (),
+    zone_names: tuple[str, ...] = ("band",),
+) -> Path:
+    """``every`` = label every k-th frame; ``unlabelled`` = person ids left out of the GT CSV."""
     seq = build_sequence(root)
     zones = root / "zones.json"
     zones.write_text(
@@ -97,18 +105,21 @@ def build_run(root: Path, *, assert_invariants: bool = True) -> Path:
                 "sequence": "SYN-01",
                 "frame_w": W,
                 "frame_h": H,
-                "zones": [{"name": "band", "points": ZONE}],
+                "zones": [{"name": name, "points": ZONE} for name in zone_names],
             }
         )
     )
-    gt = root / "SYN-01.band.csv"
-    with gt.open("w", newline="") as fh:
-        w = csv.writer(fh)
-        w.writerow(["frame", "person_id", "in_zone", "source", "annotator"])
-        for f in range(1, N + 1):
-            for pid, _box, flag, _cls in present(f):
-                if flag:
-                    w.writerow([f, pid, 1 if pid == 1 else 0, "manual", "test"])
+    gt_files = {}
+    for name in zone_names:
+        gt = root / f"SYN-01.{name}.csv"
+        gt_files[name] = str(gt)
+        with gt.open("w", newline="") as fh:
+            w = csv.writer(fh)
+            w.writerow(["frame", "person_id", "in_zone", "source", "annotator"])
+            for f in range(1, N + 1, every):
+                for pid, _box, flag, _cls in present(f):
+                    if flag and pid not in unlabelled:
+                        w.writerow([f, pid, 1 if pid == 1 else 0, "manual", "test"])
     config = root / "config.yaml"
     config.write_text(
         yaml.safe_dump(
@@ -119,7 +130,7 @@ def build_run(root: Path, *, assert_invariants: bool = True) -> Path:
                         "path": str(seq),
                         "fps": 30,
                         "zone_file": str(zones),
-                        "gt_files": {"band": str(gt)},
+                        "gt_files": gt_files,
                     }
                 ],
                 "rules": "all",
@@ -279,3 +290,64 @@ def test_derived_gt_is_refused_unless_allowed(tmp_path: Path) -> None:
     config.write_text(yaml.safe_dump(raw))
     out = run(config, detector=fake_detector(), run_id="d2", figures=False)
     assert "Sanity check only" in (out.run_dir / "report.md").read_text()
+
+
+# --- regressions from the review of the first MOT17 run ------------------------------
+
+
+def test_unlabelled_person_is_ignored_not_counted_as_outside(tmp_path: Path) -> None:
+    out = run(
+        build_run(tmp_path, unlabelled=(3,)), detector=fake_detector(), run_id="u", figures=False
+    )
+    bbox = row(out.metrics, "bbox_overlap")
+    # P3 (feet below the zone) has no label: its 50 detections are neither FP nor TN.
+    assert (bbox["tp"], bbox["fp"], bbox["fn"], bbox["tn"]) == (90, 5, 10, 100)
+    assert (row(out.metrics, "bottom_center")["tn"]) == 100
+    assert out.metrics["missing_labels"] == 50
+
+
+def test_sparse_labels_keep_events_in_video_frames(tmp_path: Path) -> None:
+    # Labels on frames 1 and 62 only (61 frames apart > the 2 s gap reset at 30 fps):
+    # the state machine still runs on every video frame, so both enter at frame 3.
+    out = run(build_run(tmp_path, every=61), detector=fake_detector(), run_id="s", figures=False)
+    r = row(out.metrics, "bottom_center")
+    assert (r["events_pred"], r["events_truth"]) == (1, 1)
+    assert (r["event_precision"], r["event_recall"], r["timing_err_median"]) == (1.0, 1.0, 0.0)
+    assert out.metrics["sequences"]["SYN-01"]["zones"]["band"]["timeline_frames"] == 62
+    # Person level uses the two labelled frames only: P1 (TP) and P2 (TN) on both, P3 on 62 (TN).
+    assert (r["tp"], r["tn"]) == (2, 3)
+
+
+def test_pooled_bootstrap_resamples_frames_not_zone_copies(tmp_path: Path) -> None:
+    config = build_run(tmp_path, zone_names=("band", "copy"))
+    out = run(config, detector=fake_detector(), run_id="p", figures=False)
+    one = row(out.metrics, "bbox_overlap")
+    pooled = row(out.metrics, "bbox_overlap", "ALL")
+    assert pooled["tp"] == 2 * one["tp"]
+    # Two identical zones carry no extra information: the CI must not shrink.
+    assert pooled["precision_ci_lo"] == pytest.approx(one["precision_ci_lo"])
+    assert pooled["precision_ci_hi"] == pytest.approx(one["precision_ci_hi"])
+
+
+def test_pooled_rows_and_sweep_report_timing(result: tuple[Path, dict]) -> None:
+    run_dir, metrics = result
+    pooled = row(metrics, "bottom_center", "ALL")
+    assert (pooled["timing_err_median"], pooled["timing_err_p90"]) == (0.0, 0.0)
+    hyst = next(
+        r
+        for r in metrics["sweep_pooled"]
+        if r["rule"] == "bottom_center" and (r["enter_frames"], r["exit_frames"]) == (3, 5)
+    )
+    assert hyst["timing_err_p90"] == 0.0
+    assert "Meets E3" in (run_dir / "report.md").read_text()
+
+
+def test_duplicate_sequence_names_are_rejected(tmp_path: Path) -> None:
+    from publicsafe.eval.runner import ConfigError
+
+    config = build_run(tmp_path)
+    raw = yaml.safe_load(config.read_text())
+    raw["sequences"].append(dict(raw["sequences"][0]))
+    config.write_text(yaml.safe_dump(raw))
+    with pytest.raises(ConfigError, match="unique"):
+        run(config, detector=fake_detector(), run_id="dup", figures=False)

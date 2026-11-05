@@ -12,6 +12,9 @@ Conventions, per (sequence, zone, rule):
 - Unmatched GT with ``in_zone=1`` -> FN, also counted in ``fn_missed_detection``.
 - Detections whose best IoU is with an ignore region are dropped everywhere,
   including the frame and event counts.
+- Event metrics run the state machine on every video frame between the first
+  and the last annotated frame; with sparse labels (``annotate --every k``)
+  the truth count is held from the last labelled frame.
 """
 
 from __future__ import annotations
@@ -65,27 +68,40 @@ def match_frame(
     ignores: np.ndarray | None = None,
     iou_threshold: float = IOU_THRESHOLD,
 ) -> FrameMatch:
-    """Hungarian matching on IoU; unmatched detections on ignore regions are discarded."""
+    """Spec I.4 matching of one frame.
+
+    A detection whose best IoU over all GT boxes is with an ignore region (and
+    at least ``iou_threshold``) is dropped first; a tie goes to the counted
+    person. The rest are matched to the counted GT with the Hungarian
+    algorithm, where a pair below the threshold scores 0, so a low-IoU pair can
+    never push out a valid one.
+    """
     dets = np.asarray(dets, dtype=float).reshape(-1, 4)
     gts = np.asarray(gts, dtype=float).reshape(-1, 4)
+    ignored: list[int] = []
+    if len(dets) and ignores is not None and len(ignores):
+        best_ignore = iou_matrix(dets, ignores).max(axis=1)
+        best_counted = iou_matrix(dets, gts).max(axis=1) if len(gts) else np.zeros(len(dets))
+        ignored = [
+            d
+            for d in range(len(dets))
+            if best_ignore[d] >= iou_threshold and best_ignore[d] > best_counted[d]
+        ]
+    keep = [d for d in range(len(dets)) if d not in set(ignored)]
     pairs: list[tuple[int, int]] = []
-    if len(dets) and len(gts):
-        iou = iou_matrix(dets, gts)
-        rows, cols = linear_sum_assignment(-iou)
+    if keep and len(gts):
+        iou = iou_matrix(dets[keep], gts)
+        rows, cols = linear_sum_assignment(np.where(iou >= iou_threshold, iou, 0.0), maximize=True)
         pairs = [
-            (int(r), int(c)) for r, c in zip(rows, cols, strict=True) if iou[r, c] >= iou_threshold
+            (keep[int(r)], int(c))
+            for r, c in zip(rows, cols, strict=True)
+            if iou[r, c] >= iou_threshold
         ]
     matched_d = {d for d, _ in pairs}
     matched_g = {g for _, g in pairs}
-    rest = [d for d in range(len(dets)) if d not in matched_d]
-    ignored: list[int] = []
-    if rest and ignores is not None and len(ignores):
-        best = iou_matrix(dets[rest], ignores).max(axis=1)
-        ignored = [d for d, v in zip(rest, best, strict=True) if v >= iou_threshold]
-    unmatched = [d for d in rest if d not in set(ignored)]
     return FrameMatch(
         pairs=sorted(pairs),
-        unmatched_dets=unmatched,
+        unmatched_dets=[d for d in keep if d not in matched_d],
         ignored_dets=ignored,
         unmatched_gts=[g for g in range(len(gts)) if g not in matched_g],
     )
@@ -336,8 +352,26 @@ def match_events(pred: Sequence[int], truth: Sequence[int], tolerance: int) -> E
     return EventMatch(sorted(pairs), len(pred), len(truth), duplicates)
 
 
+@dataclass
+class EventTimeline:
+    """Per video frame: the GT in-zone count and each rule's count (ignored detections out)."""
+
+    frames: list[int]
+    truth: list[int]
+    pred: dict[str, list[int]]
+
+
+def timeline_from_frames(frames: Sequence[ZoneFrame], rules: Sequence[str]) -> EventTimeline:
+    """Timeline of densely annotated frames (every frame labelled, as with derived GT)."""
+    return EventTimeline(
+        frames=[zf.frame for zf in frames],
+        truth=[sum(1 for v in zf.in_zone if v == 1) for zf in frames],
+        pred={rule: [len(zf.counted_hits(rule)) for zf in frames] for rule in rules},
+    )
+
+
 def event_metrics(
-    frames: Sequence[ZoneFrame],
+    timeline: EventTimeline,
     rule: str,
     fps: float,
     enter_frames: int,
@@ -345,11 +379,8 @@ def event_metrics(
     tolerance: int,
 ) -> dict[str, Any]:
     """The state machine applied identically to the GT counts and to the rule's counts."""
-    numbers = [zf.frame for zf in frames]
-    truth_counts = [sum(1 for v in zf.in_zone if v == 1) for zf in frames]
-    pred_counts = [len(zf.counted_hits(rule)) for zf in frames]
-    truth = entered_frames(truth_counts, numbers, fps, enter_frames, exit_frames)
-    pred = entered_frames(pred_counts, numbers, fps, enter_frames, exit_frames)
+    truth = entered_frames(timeline.truth, timeline.frames, fps, enter_frames, exit_frames)
+    pred = entered_frames(timeline.pred[rule], timeline.frames, fps, enter_frames, exit_frames)
     return match_events(pred, truth, tolerance).summary()
 
 
@@ -366,8 +397,14 @@ def evaluate_zone(
     tolerance: int,
     bootstrap_n: int,
     seed: int,
+    timeline: EventTimeline | None = None,
 ) -> dict[str, Any]:
-    """Person, frame and event metrics with CIs per rule, the McNemar matrix and boundary bins."""
+    """Person, frame and event metrics with CIs per rule, the McNemar matrix and boundary bins.
+
+    ``timeline`` is the per-video-frame series for the event level; without it
+    the annotated frames are assumed to be every frame.
+    """
+    timeline = timeline or timeline_from_frames(frames, rules)
     per_rule: dict[str, dict[str, Any]] = {}
     for rule in rules:
         counts = person_counts(frames, rule)
@@ -386,7 +423,7 @@ def evaluate_zone(
             "recall_ci_hi": ci["recall"][1],
             "f1_ci_lo": ci["f1"][0],
             "f1_ci_hi": ci["f1"][1],
-            **event_metrics(frames, rule, fps, enter_frames, exit_frames, tolerance),
+            **event_metrics(timeline, rule, fps, enter_frames, exit_frames, tolerance),
             "frame_level": frame_occupancy(frames, rule),
         }
     return {

@@ -81,7 +81,9 @@ def e3_check(sweep_pooled: Sequence[dict[str, Any]], rule: str) -> dict[str, Any
         return None
     d0, d1 = none.get("duplicate_rate"), hyst.get("duplicate_rate")
     drop = None if not d0 or d1 is None else (d0 - d1) / d0
-    return {"rule": rule, "dup_none": d0, "dup_hyst": d1, "drop": drop}
+    p90 = hyst.get("timing_err_p90")
+    meets = drop is not None and drop >= 0.5 and p90 is not None and p90 <= 10
+    return {"rule": rule, "dup_none": d0, "dup_hyst": d1, "drop": drop, "p90": p90, "meets": meets}
 
 
 def write_report(run_dir: Path, doc: dict[str, Any], figures: bool = True) -> Path:
@@ -123,7 +125,7 @@ def write_report(run_dir: Path, doc: dict[str, Any], figures: bool = True) -> Pa
             ],
             ["Bootstrap", f"{cfg['stats']['bootstrap_n']} resamples, seed {cfg['stats']['seed']}"],
             ["Invariant violations", doc.get("invariant_violations", 0)],
-            ["GT persons without a label", doc.get("missing_labels", 0)],
+            ["GT persons without a label (treated as ignore)", doc.get("missing_labels", 0)],
         ],
     )
 
@@ -252,18 +254,26 @@ def write_report(run_dir: Path, doc: dict[str, Any], figures: bool = True) -> Pa
         lines += ["", "## Hysteresis sweep (E3), pooled event metrics", ""]
         lines += table(
             ["Rule", "Enter", "Exit", "Pred events", "Truth events", "Event P", "Event R",
-             "Event F1", "Dup. rate"],
+             "Event F1", "Dup. rate", "Timing p90"],
             [[r["rule"], r["enter_frames"], r["exit_frames"], r["events_pred"], r["events_truth"],
-              r["event_precision"], r["event_recall"], r["event_f1"], r["duplicate_rate"]]
+              r["event_precision"], r["event_recall"], r["event_f1"], r["duplicate_rate"],
+              r.get("timing_err_p90")]
              for r in doc["sweep_pooled"]],
         )  # fmt: skip
         e3 = [x for x in (e3_check(doc["sweep_pooled"], r) for r in rules) if x]
         if e3:
-            lines += ["", "Duplicate-rate drop from 1 in / 1 out to 3 in / 5 out:", ""]
+            lines += ["", "E3 check: duplicate-rate drop from 1 in / 1 out to 3 in / 5 out:", ""]
             lines += table(
-                ["Rule", "Dup. rate 1/1", "Dup. rate 3/5", "Relative drop"],
-                [[x["rule"], x["dup_none"], x["dup_hyst"], x["drop"]] for x in e3],
-            )
+                ["Rule", "Dup. rate 1/1", "Dup. rate 3/5", "Relative drop",
+                 "Timing err. p90 (3/5)", "Meets E3"],
+                [[x["rule"], x["dup_none"], x["dup_hyst"], x["drop"], x["p90"], x["meets"]]
+                 for x in e3],
+            )  # fmt: skip
+            lines += [
+                "",
+                "Timing errors are at most the matching tolerance by construction, so the p90",
+                "part of E3 only bites when the tolerance is wider than 10 frames.",
+            ]
 
     t = doc["timings"]
     lines += ["", "## Offline latency per frame (ms)", ""]

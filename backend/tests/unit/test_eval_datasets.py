@@ -178,3 +178,12 @@ def test_open_source_kinds(tmp_path: Path) -> None:
     src = ds.open_source(video)
     assert src.kind == "video" and src.fps == 25
     assert len(list(src)) == 4
+
+
+def test_manifest_skips_partial_and_hidden_files(tmp_path: Path) -> None:
+    (tmp_path / "img1").mkdir()
+    (tmp_path / "img1" / "000001.jpg").write_bytes(b"x")
+    clean = ds.write_manifest(tmp_path)
+    (tmp_path / ".DS_Store").write_bytes(b"finder")
+    (tmp_path / "img1" / "000002.jpg.part").write_bytes(b"half")
+    assert ds.write_manifest(tmp_path) == clean

@@ -149,8 +149,8 @@ def write_manifest(seq_dir: Path) -> str:
     """Write ``MANIFEST.sha256`` for the files below ``seq_dir``; returns the manifest's SHA-256."""
     lines = []
     for path in sorted(p for p in seq_dir.rglob("*") if p.is_file()):
-        if path.name == "MANIFEST.sha256":
-            continue
+        if path.name == "MANIFEST.sha256" or path.name.startswith(".") or path.suffix == ".part":
+            continue  # leftovers of an interrupted fetch, .DS_Store
         digest = hashlib.sha256(path.read_bytes()).hexdigest()
         lines.append(f"{digest}  {path.relative_to(seq_dir).as_posix()}\n")
     text = "".join(lines)
