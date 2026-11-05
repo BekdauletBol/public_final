@@ -33,12 +33,23 @@ up while building it:
   `source=derived` stops with an error unless the config sets
   `allow_derived_gt: true`; the report then opens with a "sanity check only"
   banner. The headline config `configs/e1_mot17.yaml` keeps it `false`.
-- **Counting conventions** (written into `eval/metrics.py`):
-  unmatched detection + rule negative = TN (so FPR has a denominator);
-  detections dropped on ignore regions are excluded everywhere (person, frame
-  and event level); the boundary analysis uses matched persons only, because
-  a detector miss is the same error for every rule and would hide the rule
-  differences (misses are reported as `fn_missed_detection`).
+- **Counting conventions** (written into `eval/metrics.py` and `runner.py`):
+  - a detection is dropped when its best IoU over all GT boxes is with an
+    ignore region (the spec's wording; TrackEval instead matches counted and
+    ignore boxes jointly, which can differ, e.g. for a duplicate detection
+    next to an ignore box); the rest are matched by Hungarian with
+    sub-threshold pairs scored 0;
+  - unmatched detection + rule negative = TN (so FPR has a denominator);
+  - dropped detections are excluded everywhere (person, frame and event level);
+  - a counted person without a label on an annotated frame is an ignore region
+    for that zone, never a silent "outside";
+  - the event level runs the state machine on every video frame between the
+    first and the last annotated frame, holding the GT count from the last
+    label, so sparse labels keep hysteresis and tolerance in video frames;
+  - pooled CIs resample (sequence, frame) clusters, since zones share frames;
+  - the boundary analysis uses matched persons only, because a detector miss
+    is the same error for every rule and would hide the rule differences
+    (misses are reported as `fn_missed_detection`).
 - A GT row with `person_id=0` marks "annotated, nobody here", so an empty
   annotated frame is not mistaken for a skipped one.
 

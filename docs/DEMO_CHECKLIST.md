@@ -128,12 +128,12 @@ MOT17-04: 1052 files, 248.1 MB, manifest ca02ae40... (verified)
 MOT17-09: 527 files, 110.8 MB, manifest d171da61... (verified)
 $ make eval CONFIG=configs/e1_mot17_derived.yaml SWEEP="enter_frames=1,3,5 exit_frames=1,5,10"
 rule                   precision  recall      f1  event_f1
-bbox_overlap               0.454   0.635   0.530     0.378
-bottom_center              0.920   0.616   0.738     0.680
-three_point_any            0.804   0.620   0.700     0.571
-three_point_majority       0.921   0.615   0.737     0.596
-three_point_all            0.934   0.563   0.703     0.604
-bottom_strip               0.879   0.613   0.723     0.571
+bbox_overlap               0.454   0.632   0.528     0.378
+bottom_center              0.919   0.613   0.735     0.680
+three_point_any            0.802   0.616   0.697     0.571
+three_point_majority       0.919   0.611   0.734     0.596
+three_point_all            0.932   0.560   0.700     0.577
+bottom_strip               0.878   0.610   0.720     0.571
 wrote data/eval/e1-mot17-derived-2026-11-05
 $ publicsafe eval check data/eval/e1-mot17-derived-2026-11-05
 invariants hold on every frame
@@ -148,7 +148,7 @@ It uses the placeholder zones and **derived** GT, so it is a sanity check;
 
 ```text
 $ make test
-253 passed, 1 skipped, 2 deselected        # skipped: PostgreSQL round-trip (needs docker compose up -d db)
+262 passed, 1 skipped, 2 deselected        # skipped: PostgreSQL round-trip (needs docker compose up -d db)
 $ make test-model
 device=mps warmup=4781 ms detections=3 in_zone=3 sha256=f59b3d833e2f
 fp32 27.9 ms/frame conf=[0.83, 0.85, 0.87]
@@ -163,11 +163,25 @@ ruff, black, mypy (strict core), eslint, prettier, tsc: clean
 ```
 
 Soak (`make test-soak`, Section D reliability): see the table below. The
-required run is 8 hours; the run done here is shorter and says so.
+required run is 8 hours; the run done here is shorter and says so. RSS on
+macOS can also fall when the system compresses idle pages, so a falling RSS
+means "no growth seen", not proof that nothing leaks.
+
+```text
+$ SOAK_DURATION=3600 make test-soak
+== 3 phone(s) @ 10.0 fps for 3600.0 s, strategy=latest ==
+camera         sent     in   proc  fps_in  fps_pr   drop   tot50   tot99    qw50    qw99
+loadtest-1    35996  35996  35969    10.0    10.0  0.001    46.6    52.0    21.0    25.2
+loadtest-2    35999  35999  35966    10.0    10.0  0.001    33.5    45.4     8.0    17.4
+loadtest-3    35997  35997  35952    10.0    10.0  0.001    25.7    28.9     0.1     0.7
+fairness ratio (max/min processed fps): 1.00   server mem 155.0 -> 54.2 MB   backlog at end: 0
+"rss_baseline_mb": 74.3, "rss_final_mb": 46.1, "rss_max_mb": 165.5, "growth": -0.38, "passed": true
+PASS
+```
 
 | Run | Duration | Phones / fps | RSS after warm-up -> end | Growth | Result |
 |---|---|---|---|---|---|
-| 2026-11-05 | 1 h | 3 / 10 (FakeDetector 20 ms) | SOAK_PENDING | | |
+| 2026-11-05 | 1 h | 3 / 10 (FakeDetector 20 ms) | 74.3 -> 46.1 MB (max 165.5 MB right after start) | -38 % | PASS: 107,887 frames processed, fairness 1.00, total p99 ≤ 52 ms, server alive |
 | 8-hour run | 8 h | 3 / 10 | **not run** (owner: `make test-soak`, leave the Mac on) | | |
 
 ## 10. Secrets, datasets, docs

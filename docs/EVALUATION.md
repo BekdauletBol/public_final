@@ -60,34 +60,49 @@ publicsafe eval check data/eval/<run_id>           # re-check the rule invariant
 
 ### Matching and metric definitions (spec I.4)
 
-- Detections are matched to MOT ground truth per frame with the Hungarian
-  algorithm on IoU, threshold 0.5. GT rows with `flag=0`, a class other than
-  1 (pedestrian) or visibility below 0.25 are ignore regions: a detection that
-  is not matched to a counted person but overlaps an ignore region with
-  IoU ≥ 0.5 is dropped, not counted as a false positive.
+- GT rows with `flag=0`, a class other than 1 (pedestrian) or visibility
+  below 0.25 are ignore regions. A detection whose best IoU over all GT boxes
+  is with an ignore region (and ≥ 0.5) is dropped, not counted as a false
+  positive (spec I.4 wording; a tie goes to the counted person). The other
+  detections are matched to the counted persons with the Hungarian algorithm
+  on IoU, where pairs below 0.5 score 0, so a low-IoU pair can never push out
+  a valid one.
+- A counted person with no label on an annotated frame (possible when the
+  eval uses other visibility or class settings than the annotator) is treated
+  as an ignore region for that zone; the report counts how often.
 - MOT17 ships no README with the archive, so the `gt.txt` layout (9 columns
   `frame, id, left, top, w, h, flag, class, visibility`, classes 1–12) was
   confirmed against the MOT16 paper (Milan et al., arXiv:1603.00831) and the
   files themselves: in all three sequences `flag=1` occurs only with class 1.
 - Per person: a matched pair is TP / FP / FN / TN from `in_zone` and the rule.
-  An unmatched detection counts as FP if the rule says "inside", otherwise TN.
+  An unmatched detection counts as FP if the rule says "inside", otherwise TN
+  (the spec does not say; this choice adds TNs and so lowers the FPR).
   A missed GT person with `in_zone=1` is FN and is also counted in
   `fn_missed_detection`, so detector misses can be told apart from rule
   errors (the report shows "recall (matched)" without them).
 - Frame level: predicted occupied if the rule counts ≥ 1 person, truly
   occupied if any GT person is in the zone.
-- Event level: the live `ZoneStateMachine` runs on the GT counts and on each
-  rule's counts; `zone_entered` events are matched greedily, nearest first,
-  within ±10 frames.
+- Event level: the live `ZoneStateMachine` runs on every video frame from the
+  first to the last annotated one, on the GT counts and on each rule's counts;
+  with sparse labels (`--every k`) the GT count is held from the last labelled
+  frame. `zone_entered` events are matched greedily, nearest first, within
+  ±10 video frames.
 - 95 % CIs: bootstrap over frames, 5,000 resamples, seed 1234 (the same
-  resamples for every rule of a zone). McNemar: exact binomial test on paired
-  per-person outcomes. Boundary analysis: error rate per 10 px bin of the GT
-  bottom-centre's signed distance to the zone edge, matched persons only.
+  resamples for every rule of a zone). The pooled rows resample
+  (sequence, frame) clusters, because the zones of one frame share its
+  detections. McNemar: exact binomial test on paired per-person outcomes
+  (it treats person instances as independent). Boundary analysis: error rate
+  per 10 px bin of the GT bottom-centre's signed distance to the zone edge,
+  matched persons only.
 
 The harness itself is tested on a 100-frame synthetic sequence whose numbers
 were worked out by hand (`backend/tests/cv/test_eval_synthetic.py`), on a
 deliberately corrupted `per_frame.jsonl`, and with an offline mock of the
-range-request download.
+range-request download. A separate review of the metric code found counting
+errors in the first version (Hungarian threshold, ignore regions, sparse
+labels, pooled CIs); they were fixed with a regression test each (commit
+`a1e25a8`) and the run below was redone. Precision and recall moved by at most
+0.004; the event F1 of `three_point_all` moved most (0.604 → 0.577).
 
 ### Datasets and checksums
 
@@ -131,8 +146,8 @@ Pre-registered success criteria (copied verbatim from spec I.5, not altered):
 | Exp | Status | Result so far |
 |---|---|---|
 | E1 | **Sanity check done, headline open** | Met on MOT17 with derived GT (below). Needs the owner's zones and manual GT, and a second data source. |
-| E2 | **Done on MOT17 (derived GT)** | Invariants hold on all 2,175 frames × 3 zones. `bottom_center` has the best F1 (0.738). |
-| E3 | **Done on MOT17 (derived GT)** | Duplicate rate 0.114 → 0.000 for `bottom_center` (−100 %); timing error p90 ≤ 5.4 frames in every zone. Few events (23 true events), so this is weak evidence. |
+| E2 | **Done on MOT17 (derived GT)** | Invariants hold on all 2,175 frames × 3 zones. `bottom_center` has the best F1 (0.735). |
+| E3 | **Done on MOT17 (derived GT)** | Duplicate rate 0.103 → 0.000 for `bottom_center` (−100 %); timing error p90 3.4 frames pooled (≤ 5.4 in every zone). Few events (23 true events), so this is weak evidence. |
 | E4 | Not done | Tracking is a P1 option and is not implemented; `--track` exits with an error instead of being ignored. |
 | E5 | **Done** (simulated phones) | p99 queue wait 67 ms (`latest`) vs 7,632 ms (`fifo`), −99 %; fairness 1.00. |
 | E6 | Not done | Needs real phones (manual step, see [DEMO_CHECKLIST.md](DEMO_CHECKLIST.md)). Server-side numbers with the real model and simulated phones are below. |
@@ -152,7 +167,7 @@ Pre-registered success criteria (copied verbatim from spec I.5, not altered):
 
 Full report: [docs/results/e1-mot17-derived-2026-11-05/report.md](results/e1-mot17-derived-2026-11-05/report.md)
 (`config.yaml`, `run.json`, `results.csv`, `metrics.json` and figures next to
-it). Run on a MacBook Air M1 (MPS), git commit `ba6ec50`, model SHA-256 as
+it). Run on a MacBook Air M1 (MPS), git commit `a1e25a8`, model SHA-256 as
 above, 2,175 frames, 3 sequences × 3 zones, 5,000 bootstrap resamples.
 Reproduce with:
 
@@ -168,40 +183,40 @@ Per-person membership, pooled over all sequences and zones:
 
 | Rule | Precision [95 % CI] | Recall [95 % CI] | F1 [95 % CI] | FPR | Recall (matched) | Event F1 |
 |---|---|---|---|---|---|---|
-| `bbox_overlap` | 0.454 [0.446, 0.462] | 0.635 [0.622, 0.649] | 0.530 [0.522, 0.537] | 0.204 | 0.983 | 0.378 |
-| `bottom_center` | **0.920** [0.915, 0.925] | 0.616 [0.604, 0.630] | **0.738** [0.728, 0.748] | 0.014 | 0.953 | **0.680** |
-| `three_point_any` | 0.804 [0.797, 0.810] | 0.620 [0.607, 0.633] | 0.700 [0.691, 0.709] | 0.040 | 0.959 | 0.571 |
-| `three_point_majority` | 0.921 [0.916, 0.926] | 0.615 [0.602, 0.628] | 0.737 [0.728, 0.747] | 0.014 | 0.951 | 0.596 |
-| `three_point_all` | 0.934 [0.929, 0.938] | 0.563 [0.552, 0.576] | 0.703 [0.693, 0.712] | 0.011 | 0.872 | 0.604 |
-| `bottom_strip` | 0.879 [0.874, 0.885] | 0.613 [0.601, 0.627] | 0.723 [0.714, 0.732] | 0.022 | 0.949 | 0.571 |
+| `bbox_overlap` | 0.454 [0.446, 0.462] | 0.632 [0.619, 0.645] | 0.528 [0.521, 0.535] | 0.204 | 0.983 | 0.378 |
+| `bottom_center` | 0.919 [0.913, 0.924] | 0.613 [0.600, 0.626] | **0.735** [0.725, 0.745] | 0.015 | 0.953 | **0.680** |
+| `three_point_any` | 0.802 [0.795, 0.809] | 0.616 [0.604, 0.629] | 0.697 [0.688, 0.705] | 0.041 | 0.958 | 0.571 |
+| `three_point_majority` | 0.919 [0.914, 0.925] | 0.611 [0.599, 0.624] | 0.734 [0.725, 0.744] | 0.014 | 0.951 | 0.596 |
+| `three_point_all` | **0.932** [0.927, 0.937] | 0.560 [0.549, 0.572] | 0.700 [0.690, 0.709] | 0.011 | 0.871 | 0.577 |
+| `bottom_strip` | 0.878 [0.871, 0.884] | 0.610 [0.598, 0.622] | 0.720 [0.710, 0.729] | 0.023 | 0.949 | 0.571 |
 
 E1 check on this one data source (precision gain over `bbox_overlap`, CIs
 separated, recall loss ≤ 0.05):
 
 | Rule | Precision gain | CIs separated | Recall loss | Meets E1 here |
 |---|---|---|---|---|
-| `bottom_center` | +0.466 | yes | 0.019 | yes |
-| `three_point_any` | +0.349 | yes | 0.015 | yes |
-| `three_point_majority` | +0.467 | yes | 0.020 | yes |
+| `bottom_center` | +0.465 | yes | 0.019 | yes |
+| `three_point_any` | +0.349 | yes | 0.016 | yes |
+| `three_point_majority` | +0.466 | yes | 0.020 | yes |
 | `three_point_all` | +0.479 | yes | 0.072 | no (recall) |
-| `bottom_strip` | +0.425 | yes | 0.022 | yes |
+| `bottom_strip` | +0.424 | yes | 0.022 | yes |
 
 What I read from it:
 
-- **Box overlap over-reports a lot.** 14,755 of its 27,035 positives are
+- **Box overlap over-reports a lot.** 14,712 of its 26,926 positives are
   people whose feet are outside the zone (precision 0.45, FPR 0.20). In the
   boundary plot its error rate is 0.53–0.77 for people standing 10–50 px
   outside the edge, where `bottom_center` stays below 0.02.
-- **Recall is limited by the detector, not by the rules.** 6,837 of about
-  7,400 false negatives are people YOLOv8n did not detect at all. On detected
+- **Recall is limited by the detector, not by the rules.** 6,904 of the 7,488
+  false negatives of `bottom_center` are people YOLOv8n did not detect at all. On detected
   people the foot-point rules keep 0.95 recall (`three_point_all` 0.87).
 - **`three_point_majority` is practically the same rule as `bottom_center`.**
   The three anchors lie on one horizontal line, and for a convex zone "two of
   three inside" implies the middle point is inside. They differ on 39 of
-  91,809 person instances (McNemar p = 0.11).
+  91,453 person instances (McNemar p = 0.11).
 - **`three_point_all` is the most precise but loses people on the edge**
   (error 0.68 in the first 10 px inside the zone). `three_point_any` still
-  keeps about a fifth of box overlap's false alarms (2,929 against 14,755).
+  keeps about a fifth of box overlap's false alarms (2,936 against 14,712).
 - **E2 recommendation:** keep `bottom_center` as the default active rule (best
   F1 and event F1; the boundary curve is the narrowest around 0 px). This has
   to be confirmed with manual GT, because derived GT favours it.
@@ -210,27 +225,28 @@ Detector (YOLOv8n, conf 0.30, `imgsz` 640) against MOT17 GT boxes at IoU 0.5:
 
 | Sequence | Frames | GT persons | Recall | Precision |
 |---|---|---|---|---|
-| MOT17-02 | 600 | 9,393 | 0.413 | 0.843 |
-| MOT17-04 | 1,050 | 39,821 | 0.456 | 0.911 |
-| MOT17-09 | 525 | 3,745 | 0.896 | 0.888 |
-| All | 2,175 | 52,959 | 0.480 | 0.897 |
+| MOT17-02 | 600 | 9,393 | 0.412 | 0.841 |
+| MOT17-04 | 1,050 | 39,821 | 0.454 | 0.911 |
+| MOT17-09 | 525 | 3,745 | 0.876 | 0.885 |
+| All | 2,175 | 52,959 | 0.477 | 0.896 |
 
 MOT17-02 and -04 contain many small and partly hidden people far from the
 camera; at 640 px input YOLOv8n misses most of them. MOT17-09 is close-up and
-the detector finds 90 %. A phone at ~2 m from a kerb is closer to MOT17-09.
+the detector finds 88 %. A phone at ~2 m from a kerb is closer to MOT17-09.
 
 Hysteresis sweep (E3), pooled event metrics for `bottom_center`:
 
-| Enter / exit frames | Predicted events | True events | Event P | Event R | Event F1 | Duplicate rate |
-|---|---|---|---|---|---|---|
-| 1 / 1 (no hysteresis) | 79 | 25 | 0.291 | 0.920 | 0.442 | 0.114 |
-| 3 / 5 (default) | 27 | 23 | 0.630 | 0.739 | 0.680 | 0.000 |
-| 3 / 10 | 22 | 20 | 0.682 | 0.750 | 0.714 | 0.000 |
-| 5 / 10 | 22 | 18 | 0.591 | 0.722 | 0.650 | 0.000 |
+| Enter / exit frames | Predicted events | True events | Event P | Event R | Event F1 | Duplicate rate | Timing error p90 |
+|---|---|---|---|---|---|---|---|
+| 1 / 1 (no hysteresis) | 78 | 25 | 0.295 | 0.920 | 0.447 | 0.103 | 4.6 |
+| 3 / 5 (default) | 27 | 23 | 0.630 | 0.739 | 0.680 | 0.000 | 3.4 |
+| 3 / 10 | 23 | 20 | 0.696 | 0.800 | 0.744 | 0.000 | 3.5 |
+| 5 / 10 | 23 | 18 | 0.609 | 0.778 | 0.683 | 0.000 | 3.1 |
 
 All rules and all nine settings are in the full report. The duplicate rate
 drops to 0 with 3 in / 5 out for every rule except `three_point_any`
-(0.149 → 0.038, −74 %). Event counts are small because the GT stays occupied
+(0.147 → 0.038, −74 %). Timing errors are in video frames and at most the
+±10-frame tolerance by construction, so the p90 part of E3 holds trivially. Event counts are small because the GT stays occupied
 for long stretches in crowded scenes, so E3 should be repeated on the owner's
 zones.
 
@@ -239,10 +255,13 @@ Offline latency per frame (1920×1080 MOT17 JPEGs, MacBook Air M1, MPS,
 
 | Span | p50 (ms) | p99 (ms) |
 |---|---|---|
-| JPEG decode | 6.9 | 8.2 |
-| YOLOv8n inference | 17.8 | 24.0 |
-| All six rules × 3 zones | 2.2 | 3.7 |
-| Total | 26.7 | 34.4 |
+| JPEG decode | 4.7 | 5.4 |
+| YOLOv8n inference | 15.4 | 19.4 |
+| All six rules × 3 zones | 1.5 | 2.6 |
+| Total | 21.2 | 26.5 |
+
+An earlier run of the same pipeline on the same Mac gave a total p50 of
+26.7 ms (inference 17.8 ms), so expect about ±25 % between runs on a laptop.
 
 ### E5: latest-frame mailbox vs FIFO (`make test-load`, 2026-11-05)
 

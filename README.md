@@ -149,14 +149,14 @@ make lint           # ruff, black, mypy (strict on core), eslint, prettier, tsc
 make api-docs       # regenerate docs/API.md from the code (a test fails if it is stale)
 ```
 
-260 automated tests in total:
+270 automated tests in total:
 
 | Suite | Tests | Runner |
 |---|---|---|
-| Unit (geometry, rules with Hypothesis, state machine, mailbox, pairing, config, eval metrics and datasets, logs, API reference) | 163 | `make test` |
+| Unit (geometry, rules with Hypothesis, state machine, mailbox, pairing, config, eval metrics and datasets, logs, API reference) | 167 | `make test` |
 | Integration (API, WebSockets, pipeline, migrations, scripted fake phone, eval CLI and annotation page) | 70 | `make test` |
 | Security (login rate limit and timing, PIN redeem limits, secrets never in responses or logs) | 8 | `make test` |
-| Computer vision (scripted sequences to events, recorder, 100-frame synthetic eval with hand-computed numbers, golden image; 2 need the real weights) | 15 | `make test`, `make test-model` |
+| Computer vision (scripted sequences to events, recorder, 100-frame synthetic eval with hand-computed numbers, golden image; 2 need the real weights) | 20 | `make test`, `make test-model` |
 | End-to-end in Chromium (pairing, zones) | 3 | `make test-browser` |
 | Load (3 fake phones at 15 fps, latest vs FIFO; `LOADTEST_DETECTOR=yolo` for the real model) | 1 | `make test-load` |
 | Soak (3 fake phones at 10 fps for 8 h, memory sampled every 30 s) | 1 | `make test-soak` |
@@ -210,7 +210,7 @@ More in [docs/SETUP_MACOS.md](docs/SETUP_MACOS.md#5-troubleshooting).
 Known limitations:
 
 - One inference worker and one YOLOv8n model per laptop; throughput is shared
-  by all cameras (about 18 ms inference and 27 ms decode + inference + rules
+  by all cameras (15-18 ms inference and 21-27 ms decode + inference + rules
   per 1080p frame on an M1 GPU; 3 phones at 10 fps keep p99 below 70 ms).
 - No person tracking: counts are per frame, so identities are not followed
   across frames. Tracking is a planned extension behind the detector seam.
@@ -223,8 +223,8 @@ Known limitations:
   foot-point rules: `bottom_center` precision 0.92 against 0.45 for box
   overlap at similar recall. The headline comparison needs manual labels on
   the owner's zones and a second data source ([EVALUATION.md](docs/EVALUATION.md)).
-- YOLOv8n at 640 px finds only 41-46 % of the people in the crowded, distant
-  MOT17-02 and -04 scenes (90 % in the close-up MOT17-09), so person-level
+- YOLOv8n at 640 px finds only 41-45 % of the people in the crowded, distant
+  MOT17-02 and -04 scenes (88 % in the close-up MOT17-09), so person-level
   recall is limited by the detector, not by the zone rules.
 - Tracking (experiment E4) is not implemented; `eval run --track` stops with
   an error.

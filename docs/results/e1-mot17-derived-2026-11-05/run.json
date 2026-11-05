@@ -1,7 +1,7 @@
 {
   "run_id": "e1-mot17-derived-2026-11-05",
-  "started_at": "2026-11-05T13:12:50.594935+00:00",
-  "finished_at": "2026-11-05T13:14:30.338455+00:00",
+  "started_at": "2026-11-05T14:22:18.684668+00:00",
+  "finished_at": "2026-11-05T14:23:25.201418+00:00",
   "host": "MacBook-Air-Ten.local",
   "platform": "macOS-26.2-arm64-arm-64bit",
   "python": "3.12.13",
@@ -16,7 +16,7 @@
     "scipy": "1.18.1"
   },
   "model_sha256": "f59b3d833e2ff32e194b5bb8e08d211dc7c5bdf144b90d2c8412c47ccfc83b36",
-  "git_commit": "ba6ec5018b17a8297ea3ade147371e83ffcfcfa1",
+  "git_commit": "a1e25a80d0a6ccb43e99f3c7971866ae05e42854",
   "config_sha256": "85a4fb0d5ff846881bcaa5c72cd613edd9194df9d833d4229df4f79cadcc991d",
   "sweep": [
     [
