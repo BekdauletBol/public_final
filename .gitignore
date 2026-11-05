@@ -3,8 +3,9 @@
 .env.*
 !.env.example
 
-# runtime data (datasets, recordings, eval outputs, sqlite)
-data/
+# runtime data (datasets, recordings, eval outputs, sqlite); zone files are committed (I.2)
+data/*
+!data/zones/
 certs/
 
 # model weights

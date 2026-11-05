@@ -74,4 +74,5 @@ make test-load     # 3 fake phones at 15 fps, latest then fifo (LOADTEST_DURATIO
 - **Phone shows a certificate warning**: install the root CA on the phone (PHONE_SETUP.md) and make sure the certificate was issued for the IP you are using (`make certs` output lists the names).
 - **`uv` not found**: `brew install uv`, or use the manual venv instructions above.
 - **"Could not load the YOLOv8n detector"**: the first start downloads `yolov8n.pt` into `data/models/`; check network access, or set `DETECTOR=none` to run without detection.
+- **Phone says the camera is blocked / "Camera access denied"**: iOS: Settings > Safari > Camera > Allow (or the "aA" menu > Website Settings > Camera), then reload; Android Chrome: lock icon > Permissions > Camera > Allow. The page must be opened over `https://` (the pre-check shows "Secure context: yes").
 - **"MPS unavailable"** (Intel Mac or old macOS): inference falls back to CPU automatically; lower the cameras' target fps (5) and max long edge (960) in the camera settings.

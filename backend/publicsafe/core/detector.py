@@ -142,16 +142,17 @@ class UltralyticsDetector:
         return self.warmup_ms
 
     def detect(self, image: np.ndarray, conf: float | None = None) -> list[Detection]:
+        options: dict[str, Any] = {
+            "conf": self.conf if conf is None else conf,
+            "classes": [0],
+            "device": self.device,
+            "imgsz": self.imgsz,
+            "verbose": False,
+        }
+        if self.half:  # ultralytics 8.4 warns on every call when `half` is passed at all
+            options["half"] = True
         with self._lock:
-            results = self._model.predict(
-                image,
-                conf=self.conf if conf is None else conf,
-                classes=[0],
-                device=self.device,
-                imgsz=self.imgsz,
-                half=self.half,
-                verbose=False,
-            )
+            results = self._model.predict(image, **options)
         out: list[Detection] = []
         for result in results:
             boxes = getattr(result, "boxes", None)

@@ -1,4 +1,4 @@
-"""``/ws/camera``: phone ingest socket (F.7, G.3). Frame processing itself arrives in M3."""
+"""``/ws/camera``: phone ingest socket (F.7, G.3)."""
 
 from __future__ import annotations
 
@@ -17,6 +17,7 @@ from publicsafe.core.timing import now_ms
 from publicsafe.db.base import session_scope, utcnow
 from publicsafe.db.models import Camera, DeviceCredential, MonitoringSession
 from publicsafe.db.repo import log_security
+from publicsafe.logs import camera_id_var
 from publicsafe.pairing import hash_device_token
 from publicsafe.ws.hub import LIVE_STATUSES, CameraConn, Hub
 
@@ -127,6 +128,8 @@ async def camera_socket(ws: WebSocket) -> None:
         ws=ws,
         ip=ip,
     )
+    camera_id_var.set(conn.camera_id)  # this socket's task: every later log line carries it
+    log.info("camera connected", extra={"session_id": conn.session_id, "ip": ip})
     old = await hub.attach(conn)
     if old is not None:
         await asyncio.to_thread(_log_superseded, factory, ip, conn.camera_id, conn.session_id)
@@ -159,9 +162,10 @@ async def camera_socket(ws: WebSocket) -> None:
     except WebSocketDisconnect:
         pass
     except Exception:
-        log.exception("camera socket failed camera=%s", conn.camera_id)
+        log.exception("camera socket failed")
         await conn.close(1011, "server_error")
     finally:
+        log.info("camera disconnected", extra={"superseded": conn.closing})
         detached = hub.detach(conn)
         if detached and not conn.closing:
             # Hub-owned task: completes even if this handler is being cancelled.

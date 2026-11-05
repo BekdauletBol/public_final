@@ -1,4 +1,4 @@
-"""``publicsafe loadtest`` (F-EVAL-3). The ``eval`` sub-commands arrive in M5."""
+"""``publicsafe loadtest`` (F-EVAL-3) and the ``publicsafe eval`` sub-commands (F-EVAL-1, I)."""
 
 from __future__ import annotations
 
@@ -312,3 +312,206 @@ def loadtest(
     if out is not None:
         out.write_text(json.dumps(results, indent=2))
         typer.echo(f"wrote {out}")
+
+
+# --- publicsafe eval ... (M5) ---------------------------------------------------------
+
+eval_app = typer.Typer(
+    help="Offline evaluation on MOT17 and recordings (spec I).", no_args_is_help=True
+)
+
+
+def _eval_fail(message: str, code: int = 2) -> typer.Exit:
+    typer.secho(message, fg=typer.colors.RED, err=True)
+    return typer.Exit(code)
+
+
+@eval_app.command("fetch")
+def eval_fetch(
+    dataset: str = typer.Argument(..., help="Dataset name; only `mot17` is supported."),
+    dest: Path = typer.Option(Path("data/mot17"), help="Target directory (git-ignored)."),
+    sequences: str = typer.Option(
+        "MOT17-02,MOT17-04,MOT17-09", help="Comma-separated train sequences."
+    ),
+    archive: Path | None = typer.Option(
+        None, exists=True, dir_okay=False, help="Use an already downloaded MOT17.zip."
+    ),
+    workers: int = typer.Option(4, min=1, max=16, help="Parallel range requests."),
+) -> None:
+    """Download only the needed MOT17 sequences from the official archive and verify them."""
+    from publicsafe.config import ROOT_DIR
+    from publicsafe.eval.datasets import DatasetError, fetch_mot17
+
+    if dataset.lower() != "mot17":
+        raise _eval_fail(f"unknown dataset {dataset!r}; only mot17 is supported")
+    target = dest if dest.is_absolute() else ROOT_DIR / dest
+    names = [s.strip() for s in sequences.split(",") if s.strip()]
+    typer.echo("MOT17 is CC BY-NC-SA 3.0 (https://motchallenge.net/); never commit it.")
+    try:
+        results = fetch_mot17(target, names, archive=archive, workers=workers, progress=typer.echo)
+    except DatasetError as exc:
+        raise _eval_fail(str(exc), 3) from None
+    for r in results:
+        state = "verified" if r.verified else "NOT RECORDED - add it to MOT17_MANIFEST_SHA256"
+        typer.echo(
+            f"{r.sequence}: {r.files} files, {r.bytes / 1e6:.1f} MB, "
+            f"manifest {r.manifest_sha256} ({state})"
+        )
+
+
+@eval_app.command("derive-gt")
+def eval_derive_gt(
+    sequence: Path = typer.Option(..., exists=True, file_okay=False, help="MOT sequence dir."),
+    zone_file: Path = typer.Option(..., exists=True, dir_okay=False),
+    out_dir: Path = typer.Option(Path("data/gt/derived"), help="Where to write the CSVs."),
+    gt_classes: str = typer.Option("1", help="MOT classes counted as persons."),
+    min_visibility: float = typer.Option(0.25, min=0.0, max=1.0),
+    every: int = typer.Option(1, min=1, help="Label every k-th frame."),
+) -> None:
+    """Write ``source=derived`` in-zone GT (GT bottom-centre in the polygon); sanity checks only."""
+    from publicsafe.config import ROOT_DIR
+    from publicsafe.eval.datasets import (
+        append_gt_rows,
+        derive_gt,
+        load_zone_file,
+        read_mot_gt,
+        read_seqinfo,
+    )
+
+    info = read_seqinfo(sequence)
+    zones = load_zone_file(zone_file)
+    boxes = read_mot_gt(sequence / "gt" / "gt.txt")
+    classes = [int(c) for c in gt_classes.split(",") if c.strip()]
+    target = out_dir if out_dir.is_absolute() else ROOT_DIR / out_dir
+    for zone in zones.zones:
+        path = target / f"{zones.sequence}.{zone.name}.csv"
+        path.unlink(missing_ok=True)
+        rows = derive_gt(
+            boxes, zone, info.width, info.height, info.length, classes, min_visibility, every
+        )
+        append_gt_rows(path, rows)
+        inside = sum(r[2] for r in rows)
+        typer.echo(f"wrote {path}: {len(rows)} rows, {inside} in zone (source=derived)")
+    typer.secho(
+        "Derived GT favours the foot-point rules; never use it for the headline result (I.3).",
+        fg=typer.colors.YELLOW,
+    )
+
+
+@eval_app.command("run")
+def eval_run(
+    config: Path = typer.Option(..., exists=True, dir_okay=False, help="Experiment YAML (I.5a)."),
+    sweep: list[str] = typer.Option(
+        [], help="Hysteresis sweep, e.g. --sweep enter_frames=1,3,5 --sweep exit_frames=1,5,10"
+    ),
+    track: bool = typer.Option(False, help="Tracking (E4, P1) - not implemented."),
+    run_id: str | None = typer.Option(None, help="Output folder name (default: time + hash)."),
+    no_figures: bool = typer.Option(False, help="Skip matplotlib figures."),
+) -> None:
+    """Run detector + all rules + state machine; write results.csv, metrics.json, report.md."""
+    from publicsafe.eval.datasets import DatasetError
+    from publicsafe.eval.runner import ConfigError, InvariantError, parse_sweep, run
+
+    if track:
+        raise _eval_fail("--track (E4) is a P1 option that is not implemented yet", 2)
+    try:
+        settings = parse_sweep(sweep) if sweep else []
+        out = run(
+            config, sweep=settings, run_id=run_id, progress=typer.echo, figures=not no_figures
+        )
+    except (ConfigError, DatasetError) as exc:
+        raise _eval_fail(str(exc), 2) from None
+    except InvariantError as exc:
+        raise _eval_fail(f"assert_invariants failed: {exc}", 4) from None
+    pooled = [r for r in out.metrics["results"] if r["sequence"] == "ALL"]
+    typer.echo(f"\n{'rule':<22}{'precision':>10}{'recall':>8}{'f1':>8}{'event_f1':>10}")
+    for r in pooled:
+
+        def f(v: Any) -> str:
+            return "-" if v is None else f"{v:.3f}"
+
+        typer.echo(
+            f"{r['rule']:<22}{f(r['precision']):>10}{f(r['recall']):>8}{f(r['f1']):>8}"
+            f"{f(r.get('event_f1')):>10}"
+        )
+    typer.echo(f"wrote {out.run_dir}")
+
+
+@eval_app.command("check")
+def eval_check(
+    run_dir: Path = typer.Argument(..., exists=True, file_okay=False, help="data/eval/<run_id>"),
+) -> None:
+    """Re-check the rule invariants (E2) on a stored per_frame.jsonl; exit 4 if any is violated."""
+    from publicsafe.eval.runner import check_per_frame
+
+    problems = check_per_frame(run_dir / "per_frame.jsonl")
+    for p in problems[:20]:
+        typer.echo(p)
+    if problems:
+        raise _eval_fail(f"{len(problems)} invariant problem(s)", 4)
+    typer.echo("invariants hold on every frame")
+
+
+@eval_app.command("annotate")
+def eval_annotate(
+    sequence: Path = typer.Option(..., exists=True, file_okay=False, help="MOT sequence dir."),
+    zone_file: Path = typer.Option(..., exists=True, dir_okay=False),
+    zone: str = typer.Option(..., help="Zone name inside the zone file."),
+    annotator: str = typer.Option(..., help="Your name or initials (stored in every row)."),
+    every: int = typer.Option(5, min=1, help="Show every k-th frame."),
+    out: Path | None = typer.Option(None, help="Default: data/gt/<sequence>.<zone>.csv"),
+    port: int = typer.Option(8765, min=1024, max=65535),
+    gt_classes: str = typer.Option("1"),
+    min_visibility: float = typer.Option(0.25, min=0.0, max=1.0),
+) -> None:
+    """Open a local page to label in_zone per GT person; appends source=manual rows."""
+    from publicsafe.config import ROOT_DIR
+    from publicsafe.eval.annotate import AnnotateSession, serve
+    from publicsafe.eval.datasets import load_zone_file
+
+    zones = load_zone_file(zone_file)
+    target = out or ROOT_DIR / "data" / "gt" / f"{zones.sequence}.{zone}.csv"
+    session = AnnotateSession(
+        seq_dir=sequence,
+        sequence=zones.sequence,
+        zone=zones.zone(zone),
+        out=target,
+        annotator=annotator,
+        every=every,
+        gt_classes=tuple(int(c) for c in gt_classes.split(",") if c.strip()),
+        min_visibility=min_visibility,
+    )
+    server = serve(session, port)
+    typer.echo(f"annotating {zones.sequence} / {zone} into {target}")
+    typer.echo(f"open http://127.0.0.1:{server.server_address[1]}/  (Ctrl+C to stop)")
+    try:
+        server.serve_forever()
+    except KeyboardInterrupt:
+        pass
+    finally:
+        server.server_close()
+
+
+@eval_app.command("agreement")
+def eval_agreement(
+    a: Path = typer.Argument(..., exists=True, dir_okay=False, help="First annotator's CSV."),
+    b: Path = typer.Argument(..., exists=True, dir_okay=False, help="Second annotator's CSV."),
+    show: int = typer.Option(50, help="How many disagreements to list."),
+) -> None:
+    """Cohen's kappa between two annotators on the (frame, person) pairs both labelled."""
+    from publicsafe.eval.datasets import read_gt_csv
+    from publicsafe.eval.metrics import cohens_kappa
+
+    la, lb = read_gt_csv(a).labels, read_gt_csv(b).labels
+    common = sorted(set(la) & set(lb))
+    if not common:
+        raise _eval_fail("the two files share no (frame, person_id) pairs")
+    kappa = cohens_kappa([la[k] for k in common], [lb[k] for k in common])
+    diff = [k for k in common if la[k] != lb[k]]
+    typer.echo(
+        f"items in common: {len(common)}, disagreements: {len(diff)}, Cohen's kappa: {kappa:.3f}"
+    )
+    for frame, pid in diff[:show]:
+        typer.echo(
+            f"  frame {frame} person {pid}: {a.name}={la[(frame, pid)]} {b.name}={lb[(frame, pid)]}"
+        )
